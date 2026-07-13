@@ -1,0 +1,19 @@
+{
+  "name": "scramble",
+  "version": "0.1.0",
+  "description": "A lightweight, extensible block-based text editor inspired by Notion and ClickUp Docs.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "node --watch server/index.js",
+    "start": "node server/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.17.0"
+  }
+}

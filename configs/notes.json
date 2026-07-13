@@ -1,0 +1,11 @@
+{
+  "name": "notes",
+  "output": "markdown",
+  "blocks": ["paragraph", "heading-1", "heading-2", "bulleted-list", "numbered-list", "checklist", "quote"],
+  "toolbar": ["bold", "italic", "code", "link"],
+  "collaboration": false,
+  "comments": false,
+  "history": true,
+  "locked": false,
+  "style": { "fullWidth": false, "smallText": false, "font": "default" }
+}
