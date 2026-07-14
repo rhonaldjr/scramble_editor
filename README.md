@@ -87,8 +87,9 @@ listen to typed events, and wire your **own backend** through adapter functions.
 - **Document** block — upload or link a PDF / Word / PowerPoint / Excel / ODF
   file; type is auto-detected and previewed inline (native PDF, or a
   host-resolved viewer / client-rendered HTML), resizable.
-- Table (add/remove rows & columns, cell editing, **drag-resize column widths**,
-  and **merge / split cells**) and an auto Table of Contents.
+- Table with a **floating toolbar** (on focus): table width (full / 75% / 50%),
+  alignment, add/remove rows & columns, **drag-resize column widths**, and
+  **merge / split cells** — plus an auto Table of Contents.
 
 **Structure & layout**
 

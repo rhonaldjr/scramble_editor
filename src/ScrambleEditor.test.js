@@ -406,7 +406,7 @@ test('legacy columns document is flattened on load (columns removed)', async () 
   expect(wrapper.text()).toContain('Right col');
 });
 
-test('table: merge two header cells via the controls (colspan)', async () => {
+test('table: floating toolbar on focus — merge cells + set width', async () => {
   const cell = (t) => [{ text: t, marks: [] }];
   const doc = {
     id: 'd', title: 't', style: {},
@@ -414,16 +414,29 @@ test('table: merge two header cells via the controls (colspan)', async () => {
   };
   const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
   await flushPromises();
-  // focus the first header cell, then Merge right
-  await wrapper.findAll('.sc-table__cell')[0].trigger('focus');
+  // toolbar is hidden until the table is focused
+  expect(wrapper.find('.sc-tabletoolbar').exists()).toBe(false);
+
+  const cell0 = wrapper.findAll('.sc-table__cell')[0];
+  await cell0.trigger('focus');     // sets the active cell
+  await cell0.trigger('focusin');   // reveals the floating toolbar (bubbles)
   await nextTick();
-  const mergeBtn = wrapper.findAll('.sc-table__op').find((b) => b.text().includes('Merge right'));
-  await mergeBtn.trigger('mousedown');
+  expect(wrapper.find('.sc-tabletoolbar').exists()).toBe(true);
+
+  // Merge right
+  const mergeBtn = wrapper.findAll('.sc-tt__btn').find((b) => b.attributes('title') === 'Merge right');
+  await mergeBtn.trigger('click');
   await nextTick();
   const rows = wrapper.vm.getDocument().blocks[0].data.rows;
   expect(rows[0][0].colSpan).toBe(2);
   expect(rows[0][1].covered).toBe(true);
   expect(wrapper.vm.getHTML()).toContain('<th colspan="2">A</th>');
+
+  // Set table width to 50%
+  const w50 = wrapper.findAll('.sc-tt__btn').find((b) => b.text() === '50%');
+  await w50.trigger('click');
+  await nextTick();
+  expect(wrapper.vm.getDocument().blocks[0].data.width).toBe('50');
 });
 
 test('block alignment (props.align) applies a content-aware class', async () => {

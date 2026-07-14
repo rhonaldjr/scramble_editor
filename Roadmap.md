@@ -300,7 +300,8 @@ Replace the `columns` layout block with a richer table.
 - [x] Table cell model → objects `{ segments, colSpan?, rowSpan?, covered? }` (`core/table.js`); legacy segment-array cells auto-upgrade; exporters emit `colspan`/`rowspan` and skip covered cells
 - [x] Column width resize: drag the boundary handles (control row) → `data.colWidths` (px); `<colgroup>` + `table-layout: fixed`; exported as a `<colgroup>`
 - [x] Merge / split cells: **Merge right**, **Merge down**, **Split** act on the focused cell; `mergeCells`/`splitCell`/`sanitizeSpans` keep the grid valid on all row/column edits
-- [ ] Verify (browser): resize columns, merge a 2×2 region, split it, add/remove rows near a merge, export HTML
+- [x] ClickUp-style **floating toolbar** (appears when the table is focused): grouped, tokenized controls for table **width** (full / 75% / 50%), **alignment**, insert/delete row & column, merge/split, delete table; column-resize handles as a thin strip
+- [ ] Verify (browser): resize columns, merge a 2×2 region, split it, add/remove rows near a merge, set width + alignment, export HTML
 
 <!-- Core: src/core/table.js (normalizeTable/cellSegments/emptyCell,
 sanitizeSpans, mergeCells, splitCell, add/deleteRow/Column). TableBlock.vue:
