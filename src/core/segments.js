@@ -1,10 +1,11 @@
 // Rich-text segments — inline formatting stored as marks in data, never raw
 // HTML. Pure functions; unit-testable, framework-free.
 //
-// A segment is { text, marks: string[], link?, mention?, color?, background? }.
-// `color`/`background` are palette tokens (see colors.js), resolved to CSS here.
+// A segment is { text, marks: string[], link?, mention?, color?, background?, badge? }.
+// `color`/`background`/`badge` are palette tokens (see colors.js), resolved to
+// CSS here. `badge` renders as a solid pill (overrides color/background).
 
-import { TEXT_COLORS, BG_COLORS } from './colors.js';
+import { TEXT_COLORS, BG_COLORS, BADGE_COLORS } from './colors.js';
 
 export function createSegment(text = '', marks = [], extra = {}) {
   return { text, marks: [...marks], ...extra };
@@ -21,6 +22,7 @@ function sameFormatting(a, b) {
   if ((a.link || null) !== (b.link || null)) return false;
   if ((a.color || null) !== (b.color || null)) return false;
   if ((a.background || null) !== (b.background || null)) return false;
+  if ((a.badge || null) !== (b.badge || null)) return false;
   return marksEqual(a.marks, b.marks);
 }
 
@@ -100,8 +102,13 @@ export function segmentsToHTML(segments) {
       for (const [mark, tag] of MARK_TAGS) {
         if (marks.includes(mark)) html = `<${tag}>${html}</${tag}>`;
       }
-      const style = colorStyle(seg);
-      if (style) html = `<span style="${style}">${html}</span>`;
+      const badge = BADGE_COLORS[seg.badge];
+      if (badge) {
+        html = `<span class="sc-badge" style="background:${badge.bg};color:${badge.fg}">${html}</span>`;
+      } else {
+        const style = colorStyle(seg);
+        if (style) html = `<span style="${style}">${html}</span>`;
+      }
       if (seg.link) html = `<a href="${escapeAttr(seg.link)}">${html}</a>`;
       if (seg.mention) {
         html = `<span class="sc-mention" data-contact-id="${escapeAttr(seg.mention.contactId || '')}">${html}</span>`;
@@ -129,8 +136,13 @@ export function segmentsToMarkdown(segments) {
         if (marks.includes('strikethrough')) out = `~~${out}~~`;
         if (marks.includes('underline')) out = `<u>${out}</u>`;
       }
-      const style = colorStyle(seg);
-      if (style) out = `<span style="${style}">${out}</span>`;
+      const badge = BADGE_COLORS[seg.badge];
+      if (badge) {
+        out = `<span class="sc-badge" style="background:${badge.bg};color:${badge.fg}">${out}</span>`;
+      } else {
+        const style = colorStyle(seg);
+        if (style) out = `<span style="${style}">${out}</span>`;
+      }
       if (seg.link) out = `[${out}](${seg.link})`;
       return out;
     })
@@ -174,6 +186,26 @@ export function rangeHasMark(segments, start, end, mark) {
   const middle = sliceSegments(segments, start, end).filter((s) => s.text !== '');
   if (middle.length === 0) return false;
   return middle.every((s) => s.marks.includes(mark));
+}
+
+// The common token of a color field ('color' | 'background' | 'badge') across a
+// range, or 'default' if empty or mixed. Used to highlight the active swatch.
+export function rangeField(segments, start, end, field) {
+  const middle = sliceSegments(segments, start, end).filter((s) => s.text !== '');
+  if (middle.length === 0) return 'default';
+  const first = middle[0][field] || 'default';
+  return middle.every((s) => (s[field] || 'default') === first) ? first : 'default';
+}
+
+// Clear color, highlight and badge on a range in one pass.
+export function clearSegmentColors(segments, start, end) {
+  return mapRange(segments, start, end, (seg) => {
+    const next = { ...seg };
+    delete next.color;
+    delete next.background;
+    delete next.badge;
+    return next;
+  });
 }
 
 export function toggleMark(segments, start, end, mark) {

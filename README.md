@@ -66,7 +66,7 @@ listen to typed events, and wire your **own backend** through adapter functions.
   to-do lists, toggle, callout, banner, divider, code (host-provided
   highlight.js).
 - Inline marks: **bold**, *italic*, underline, strikethrough, `code`, links,
-  plus **text color** and **highlight** (palette tokens).
+  plus a ClickUp-style **text color / highlight / badge** picker (vibrant palette).
 - Slash menu (`/`), Markdown shortcuts (`# `, `- `, `1. `, `[] `, `> `,
   ` ``` `, `---`, …), and a selection toolbar.
 - Turn Into (convert between compatible blocks), a block handle menu
@@ -399,9 +399,12 @@ with `editor.value.enable('dragAndDrop')` / `disable(...)`.
 - **Width** presets: `full`, `75%`, `50%` (or a px number / CSS length).
 - **Fonts**: entries with a `url` inject a `<link>` automatically; the user picks
   them from the page-style **Aa** menu (alongside default/serif/mono).
-- **Text color / highlight**: select text → toolbar **A▾** / **▮▾**. Stored as
-  palette tokens; exported as inline-style spans. Gate with
-  `config.toolbar: ['color', 'background']`.
+- **Text color, highlight & badge**: select text → the toolbar's **A▾** opens a
+  ClickUp-style panel with a vibrant palette: **Text color** (foreground),
+  **Text highlight** (soft background wash), and **Badge** (a solid/soft pill),
+  plus **Remove color**. Stored as palette tokens on the segment and exported as
+  inline-style spans (`sc-badge` pill for badges). Gate with
+  `config.toolbar: ['color', 'background', 'badge']`.
 - **Full screen**: a built-in ⛶ button (Esc to exit), or drive it via
   `toggleFullscreen()` / the `fullscreen-changed` event; disable with
   `:features="{ fullscreen: false }"`.

@@ -173,7 +173,7 @@ jsdom`. -->
 
 Post-V12 enhancements. Import fidelity + inline styling + a live-URL block.
 
-- [x] Inline text color / highlight on a selection (palette tokens; HTML+Markdown export) — `setSegmentColor`, InlineToolbar palette
+- [x] Inline text color / highlight / **badge** on a selection — ClickUp-style panel with a vibrant palette + "Remove color" (palette tokens; HTML+Markdown export; badge = solid/soft pill) — `setSegmentColor`/`clearSegmentColors`/`rangeField`, `colors.js` palettes, InlineToolbar color panel
 - [x] Custom fonts interface (`fonts` prop: `{ id, label, family, url? }` → auto `<link>` + page-style picker) + example
 - [x] Web page block: live iframe preview of a URL, free width/height resize, URL via ⚙ gear (`webpage` type)
 - [x] Structured HTML paste: rich web-page HTML → real blocks (headings/lists/quotes/code/tables/images), not one flat paragraph — `core/html-import.js`

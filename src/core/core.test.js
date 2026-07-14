@@ -62,8 +62,8 @@ test('setSegmentColor sets and clears color/background on a range', () => {
     { text: 'world', marks: [], color: 'red' },
   ]);
   // renders as an inline style span in both exporters
-  expect(segmentsToHTML(colored)).toBe('Hello <span style="color:#c4554d">world</span>');
-  expect(segmentsToMarkdown(colored)).toBe('Hello <span style="color:#c4554d">world</span>');
+  expect(segmentsToHTML(colored)).toBe('Hello <span style="color:#e03e3e">world</span>');
+  expect(segmentsToMarkdown(colored)).toBe('Hello <span style="color:#e03e3e">world</span>');
   // adds a second (background) field, then clears the color with `default`
   const withBg = setSegmentColor(colored, 6, 11, 'background', 'yellow');
   const cleared = setSegmentColor(withBg, 6, 11, 'color', 'default');
@@ -77,6 +77,22 @@ test('adjacent differently-colored segments do not merge', () => {
   let segs = setSegmentColor([{ text: 'abcdef', marks: [] }], 0, 3, 'color', 'red');
   segs = setSegmentColor(segs, 3, 6, 'color', 'blue');
   expect(segs.map((s) => s.color)).toEqual(['red', 'blue']);
+});
+
+test('badge renders a solid pill span (overriding color/highlight in render)', async () => {
+  const { setSegmentColor: setColor, rangeField, clearSegmentColors } = await import('./segments.js');
+  const base = [{ text: 'Status open', marks: [] }];
+  const badged = setColor(base, 7, 11, 'badge', 'green');
+  expect(badged[1]).toEqual({ text: 'open', marks: [], badge: 'green' });
+  expect(segmentsToHTML(badged)).toBe('Status <span class="sc-badge" style="background:#2b8a3e;color:#ffffff">open</span>');
+  // soft badge token maps to a tinted background + dark text
+  const soft = setColor(base, 7, 11, 'badge', 'blue-soft');
+  expect(segmentsToHTML(soft)).toContain('style="background:#a5d8ff;color:#0b4a9c"');
+  // rangeField reports the active token; clearSegmentColors wipes all three
+  expect(rangeField(badged, 7, 11, 'badge')).toBe('green');
+  expect(rangeField(badged, 0, 11, 'badge')).toBe('default'); // mixed → default
+  const cleared = clearSegmentColors(setColor(badged, 7, 11, 'color', 'red'), 0, 11);
+  expect(cleared).toEqual([{ text: 'Status open', marks: [] }]);
 });
 
 test('setLinkOnRange applies then clears a link', () => {

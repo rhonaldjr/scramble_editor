@@ -9,19 +9,68 @@
     >
       {{ t.label }}
     </button>
-    <button v-if="showColor" class="sc-toolbar__btn" title="Text color" @mousedown.prevent="togglePalette('color')">A▾</button>
-    <button v-if="showBg" class="sc-toolbar__btn" title="Highlight" @mousedown.prevent="togglePalette('background')">▮▾</button>
+    <button
+      v-if="showColorPanel"
+      class="sc-toolbar__btn sc-toolbar__color"
+      :class="{ active: panelOpen }"
+      title="Text color, highlight & badge"
+      @mousedown.prevent="togglePanel"
+    ><span class="sc-toolbar__colorA" :style="activeAStyle">A</span><span class="sc-toolbar__caret">▾</span></button>
 
-    <div v-if="palette" class="sc-toolbar__palette" @mousedown.stop>
-      <button
-        v-for="tok in COLOR_TOKENS"
-        :key="tok"
-        class="sc-swatch2"
-        :class="{ 'sc-swatch2--default': tok === 'default' }"
-        :style="swatchStyle(tok)"
-        :title="tok"
-        @mousedown.prevent="applyColor(tok)"
-      >{{ palette === 'color' && tok !== 'default' ? 'A' : '' }}</button>
+    <div v-if="panelOpen" class="sc-colorpanel" @mousedown.stop>
+      <div class="sc-colorpanel__label">Text color</div>
+      <div class="sc-colorpanel__row">
+        <button
+          v-for="tok in TEXT_TOKENS"
+          :key="tok"
+          class="sc-cp-a"
+          :class="{ 'is-active': active.color === tok }"
+          :style="{ color: TEXT_COLORS[tok] }"
+          :title="tok"
+          @mousedown.prevent="applyField('color', tok)"
+        >A</button>
+      </div>
+
+      <div class="sc-colorpanel__label">Text highlight</div>
+      <div class="sc-colorpanel__row">
+        <button
+          v-for="tok in HIGHLIGHT_TOKENS"
+          :key="tok"
+          class="sc-cp-dot"
+          :class="{ 'is-active': active.background === tok }"
+          :style="{ background: BG_COLORS[tok] }"
+          :title="tok"
+          @mousedown.prevent="applyField('background', tok)"
+        />
+        <button class="sc-cp-dot sc-cp-none" title="No highlight" @mousedown.prevent="applyField('background', 'default')">⊘</button>
+      </div>
+
+      <div class="sc-colorpanel__label">Badge</div>
+      <div class="sc-colorpanel__row">
+        <button
+          v-for="tok in BADGE_TOKENS"
+          :key="tok"
+          class="sc-cp-badge"
+          :class="{ 'is-active': active.badge === tok }"
+          :style="{ background: BADGE_COLORS[tok].bg }"
+          :title="tok"
+          @mousedown.prevent="applyField('badge', tok)"
+        />
+        <button class="sc-cp-dot sc-cp-none" title="No badge" @mousedown.prevent="applyField('badge', 'default')">⊘</button>
+      </div>
+      <div class="sc-colorpanel__row">
+        <button
+          v-for="tok in BADGE_SOFT_TOKENS"
+          :key="tok"
+          class="sc-cp-badge"
+          :class="{ 'is-active': active.badge === tok }"
+          :style="{ background: BADGE_COLORS[tok].bg }"
+          :title="tok"
+          @mousedown.prevent="applyField('badge', tok)"
+        />
+      </div>
+
+      <button class="sc-colorpanel__remove" @mousedown.prevent="removeAll">⊘ Remove color</button>
     </div>
   </div>
 </template>
@@ -30,11 +79,15 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useEditor } from '../composables/editor.js';
 import { findBlock } from '../core/model.js';
-import { toggleMark, setLinkOnRange, rangeHasMark, setSegmentColor } from '../core/segments.js';
-import { COLOR_TOKENS, TEXT_COLORS, BG_COLORS } from '../core/colors.js';
+import { toggleMark, setLinkOnRange, rangeHasMark, setSegmentColor, clearSegmentColors, rangeField } from '../core/segments.js';
+import {
+  TEXT_COLORS, BG_COLORS, BADGE_COLORS,
+  TEXT_TOKENS, HIGHLIGHT_TOKENS, BADGE_TOKENS, BADGE_SOFT_TOKENS,
+} from '../core/colors.js';
 
 const ctx = useEditor();
-const palette = ref(null); // null | 'color' | 'background'
+const panelOpen = ref(false);
+const active = ref({ color: 'default', background: 'default', badge: 'default' });
 const ALL = [
   { mark: 'bold', label: 'B', cls: 'is-bold' },
   { mark: 'italic', label: 'i', cls: 'is-italic' },
@@ -53,30 +106,51 @@ const tools = computed(() => {
   const allowed = ctx.config.value && ctx.config.value.toolbar ? new Set(ctx.config.value.toolbar) : null;
   return allowed ? ALL.filter((t) => allowed.has(t.mark)) : ALL;
 });
-const showColor = computed(() => {
+const showColorPanel = computed(() => {
   const t = ctx.config.value && ctx.config.value.toolbar;
-  return !t || t.includes('color');
+  return !t || t.includes('color') || t.includes('background') || t.includes('badge');
 });
-const showBg = computed(() => {
-  const t = ctx.config.value && ctx.config.value.toolbar;
-  return !t || t.includes('background');
-});
+const activeAStyle = computed(() => ({ color: TEXT_COLORS[active.value.color] || 'inherit' }));
 
-function togglePalette(kind) { palette.value = palette.value === kind ? null : kind; }
-function swatchStyle(tok) {
-  if (palette.value === 'color') return { color: TEXT_COLORS[tok] || 'inherit' };
-  return { background: BG_COLORS[tok] || 'transparent' };
-}
-function applyColor(tok) {
+function togglePanel() { panelOpen.value = !panelOpen.value; }
+
+function withRange(fn) {
   const range = sel.value;
   if (!range) return;
   const loc = findBlock(ctx.doc.blocks, range.id);
-  if (loc) {
-    loc.block.data.segments = setSegmentColor(loc.block.data.segments, range.start, range.end, palette.value, tok);
-    ctx.emitEvent('block:updated', { id: range.id });
-    ctx.markChanged();
-  }
-  palette.value = null;
+  if (!loc) return;
+  loc.block.data.segments = fn(loc.block.data.segments, range.start, range.end);
+  ctx.emitEvent('block:updated', { id: range.id });
+  ctx.markChanged();
+  refreshActive(range);
+}
+
+// Apply a token to one color field. A badge overrides color/highlight, so
+// setting a badge clears them (and vice-versa) to match ClickUp's behavior.
+function applyField(field, tok) {
+  withRange((segs, s, e) => {
+    let next = setSegmentColor(segs, s, e, field, tok);
+    if (field === 'badge' && tok !== 'default') {
+      next = setSegmentColor(next, s, e, 'color', 'default');
+      next = setSegmentColor(next, s, e, 'background', 'default');
+    } else if ((field === 'color' || field === 'background') && tok !== 'default') {
+      next = setSegmentColor(next, s, e, 'badge', 'default');
+    }
+    return next;
+  });
+}
+function removeAll() {
+  withRange((segs, s, e) => clearSegmentColors(segs, s, e));
+}
+function refreshActive(range) {
+  const loc = findBlock(ctx.doc.blocks, range.id);
+  if (!loc) return;
+  const segs = loc.block.data.segments;
+  active.value = {
+    color: rangeField(segs, range.start, range.end, 'color'),
+    background: rangeField(segs, range.start, range.end, 'background'),
+    badge: rangeField(segs, range.start, range.end, 'badge'),
+  };
 }
 
 function contentOf(node) {
@@ -100,13 +174,17 @@ function currentRange() {
 }
 
 function onSelChange() {
-  if (!ctx.isEnabled('toolbar')) { visible.value = false; palette.value = null; return; }
+  if (!ctx.isEnabled('toolbar')) { visible.value = false; panelOpen.value = false; return; }
   const range = currentRange();
-  if (!range) { visible.value = false; palette.value = null; return; }
+  if (!range) { visible.value = false; panelOpen.value = false; return; }
   sel.value = range;
   const loc = findBlock(ctx.doc.blocks, range.id);
   activeMarks.value = {};
-  if (loc) tools.value.forEach((t) => (activeMarks.value[t.mark] = rangeHasMark(loc.block.data.segments, range.start, range.end, t.mark)));
+  if (loc) {
+    tools.value.forEach((t) => (activeMarks.value[t.mark] = rangeHasMark(loc.block.data.segments, range.start, range.end, t.mark)));
+    refreshActive(range);
+  }
+  panelOpen.value = false;
   const r = window.getSelection().getRangeAt(0).getBoundingClientRect();
   pos.value = { position: 'fixed', left: `${Math.round(r.left)}px`, top: `${Math.round(r.top - 40)}px` };
   visible.value = true;

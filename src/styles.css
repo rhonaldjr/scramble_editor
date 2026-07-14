@@ -308,9 +308,28 @@
 .sc-toolbar__btn.is-italic { font-style: italic; }
 .sc-toolbar__btn.is-underline { text-decoration: underline; }
 .sc-toolbar__btn.is-strike { text-decoration: line-through; }
-.sc-toolbar__palette { position: absolute; top: 100%; left: 0; margin-top: 4px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 6px; background: #1f1f1f; border-radius: 7px; box-shadow: 0 4px 14px rgba(15,15,15,0.35); }
-.sc-swatch2 { width: 22px; height: 22px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
-.sc-swatch2--default { background: repeating-linear-gradient(45deg, #444, #444 3px, #666 3px, #666 6px) !important; }
+.sc-toolbar__color { display: inline-flex; align-items: center; gap: 1px; padding: 0 5px; }
+.sc-toolbar__colorA { font-weight: 700; }
+.sc-toolbar__caret { font-size: 9px; opacity: 0.85; }
+
+/* ClickUp-style color panel (text color · highlight · badge) */
+.sc-colorpanel { position: absolute; top: 100%; left: 0; margin-top: 6px; width: 268px; padding: 12px; background: #fff; color: #1f2329; border-radius: 12px; box-shadow: 0 8px 28px rgba(15,15,15,0.28); }
+.sc-colorpanel__label { font-size: 12px; font-weight: 600; color: #7a828e; margin: 4px 2px 8px; }
+.sc-colorpanel__row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.sc-cp-a { width: 30px; height: 30px; border: 1px solid #e4e6ea; border-radius: 8px; background: #fff; font-size: 15px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.sc-cp-a:hover { border-color: #b9c0cc; }
+.sc-cp-a.is-active { border-color: #1f2329; border-width: 2px; }
+.sc-cp-dot { width: 30px; height: 30px; border: 1px solid rgba(0,0,0,0.08); border-radius: 999px; cursor: pointer; }
+.sc-cp-dot.is-active { outline: 2px solid #1f2329; outline-offset: 1px; }
+.sc-cp-badge { width: 30px; height: 30px; border: none; border-radius: 999px; cursor: pointer; }
+.sc-cp-badge.is-active { outline: 2px solid #1f2329; outline-offset: 1px; }
+.sc-cp-none { background: #fff; color: #7a828e; font-size: 15px; display: flex; align-items: center; justify-content: center; }
+.sc-cp-none:hover { color: #1f2329; }
+.sc-colorpanel__remove { width: 100%; margin-top: 2px; padding: 9px; border: 1px solid #e4e6ea; border-radius: 8px; background: #fff; color: #1f2329; font: inherit; cursor: pointer; }
+.sc-colorpanel__remove:hover { background: #f4f5f7; }
+
+/* inline badge (pill) rendered inside text */
+.sc-badge { padding: 1px 8px; border-radius: 999px; font-weight: 600; font-size: 0.9em; }
 
 .sc-readonly .sc-block__handle { display: none; }
 
