@@ -124,6 +124,19 @@ test('document block uses a host resolveDocumentUrl adapter when provided', asyn
   expect(wrapper.find('.sc-document__frame').attributes('src')).toBe('https://viewer/?f=' + encodeURIComponent('https://x.com/a.docx'));
 });
 
+test('document block renders host-provided HTML (client-side docx/xlsx) via srcdoc', async () => {
+  const adapters = { resolveDocumentUrl: async () => ({ html: '<p>Rendered body</p>' }) };
+  const wrapper = mount(ScrambleEditor, {
+    props: { modelValue: docWithBlock({ url: 'data:application/vnd;base64,AA', docType: 'word' }), adapters },
+  });
+  await flushPromises();
+  await nextTick();
+  const frame = wrapper.find('.sc-document__frame');
+  expect(frame.exists()).toBe(true);
+  expect(frame.attributes('src')).toBeUndefined();
+  expect(frame.attributes('srcdoc')).toContain('Rendered body');
+});
+
 test('document block shows a fallback when an office file has no viewable URL', async () => {
   const wrapper = mount(ScrambleEditor, { props: { modelValue: docWithBlock({ url: 'data:application/vnd;base64,AA', docType: 'word' }) } });
   await flushPromises();

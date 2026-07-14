@@ -133,7 +133,7 @@ internals.
 - **`adapters.upload(file) => { url } | url`** — store dropped/selected media.
 - **`adapters.fetchContacts(query) => contact[]`** — mentions / contact block.
 - **`adapters.fetchEmbedMeta(url) => meta`** — bookmark previews.
-- **`adapters.resolveDocumentUrl({url,type,name,blockId}) => url | {url}`** — resolve the Document block's viewer URL (optional; falls back to native PDF + Office Online viewer).
+- **`adapters.resolveDocumentUrl({url,type,name,blockId,file}) => url | {url} | {html}`** — resolve the Document block's preview: a viewer URL, or client-side-rendered `{html}` (shown in a sandboxed iframe). Optional; falls back to native PDF + Office Online viewer.
 - **Collaboration / comments / history**: consumed via events + adapters; the
   component provides hooks, the host provides transport/storage.
 

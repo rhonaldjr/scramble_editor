@@ -197,7 +197,7 @@ Slash-inserted viewer for uploaded / linked office & PDF documents.
 - [x] `document` block: insert via slash; empty state offers **upload** (`adapters.upload`) or **paste a link** (also settable programmatically via `v-model`)
 - [x] Auto-detect type from extension/name/mime: pdf, doc/docx/odt/rtf, ppt/pptx/odp, xls/xlsx/ods/csv → render appropriately (native PDF iframe; Office/ODF through a viewer URL) with a graceful fallback + download link when no inline preview is possible
 - [x] Free width/height resize (same as the web page block) + ⚙ gear (URL, type override, width, height)
-- [x] Per-block pull interface: `adapters.resolveDocumentUrl({ url, type, name, blockId }) → url | { url }` (host resolves/proxies/signs), with a built-in default (native PDF + Office Online viewer) the consumer can override
+- [x] Per-block pull interface: `adapters.resolveDocumentUrl({ url, type, name, blockId, file }) → url | { url } | { html }` (host resolves/proxies/signs, or renders client-side and returns HTML shown in a sandboxed iframe), with a built-in default (native PDF + Office Online viewer) the consumer can override; example renders docx/xlsx locally since local uploads aren't public
 - [x] Events: `document-added`, `document-configured` (+ reuse `media-uploaded` / `media-resized`); example implements the resolver + logs the events
 - [ ] Verify (browser): insert, upload each type + paste a link, resize, confirm resolver + events fire
 

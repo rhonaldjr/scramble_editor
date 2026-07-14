@@ -8,7 +8,14 @@
       </div>
 
       <iframe
-        v-if="viewerUrl"
+        v-if="viewerHtml"
+        class="sc-document__frame"
+        :srcdoc="viewerHtml"
+        sandbox="allow-same-origin"
+        referrerpolicy="no-referrer"
+      />
+      <iframe
+        v-else-if="viewerUrl"
         class="sc-document__frame"
         :src="viewerUrl"
         frameborder="0"
@@ -16,12 +23,16 @@
         referrerpolicy="no-referrer"
       />
       <div v-else class="sc-document__fallback">
-        <p>Can’t preview this {{ label.toLowerCase() }} inline.</p>
-        <p class="sc-document__hint">
-          Office/ODF files need a public URL or a
-          <code>resolveDocumentUrl</code> adapter. PDFs preview directly.
-        </p>
-        <a :href="block.data.url" target="_blank" rel="noopener" download>Download the file</a>
+        <p v-if="resolving">Preparing preview…</p>
+        <template v-else>
+          <p>Can’t preview this {{ label.toLowerCase() }} inline.</p>
+          <p class="sc-document__hint">
+            PDFs preview directly. Office/ODF files need a public URL or a
+            <code>resolveDocumentUrl</code> adapter (which may also return rendered
+            <code>{ html }</code> — see the example).
+          </p>
+          <a :href="block.data.url" target="_blank" rel="noopener" download>Download the file</a>
+        </template>
       </div>
 
       <template v-if="!readonly">
@@ -84,6 +95,9 @@ const readonly = computed(() => ctx.readonly.value);
 const over = ref(false);
 const showGear = ref(false);
 const viewerUrl = ref('');
+const viewerHtml = ref('');
+const resolving = ref(false);
+let lastFile = null; // transient File from the last upload/drop (for host renderers)
 
 const hasUploader = computed(() => typeof ctx.adapters.value.upload === 'function');
 const docType = computed(() => props.block.data.docType || detectDocType(props.block.data.name || props.block.data.url));
@@ -94,24 +108,43 @@ const frameStyle = computed(() => ({
   height: `${props.block.data.height || 480}px`,
 }));
 
-// Resolve the embeddable URL: host adapter first (per-block pull hook), then the
-// built-in default (native PDF / Office Online viewer). Cache it on the block so
-// exporters can reuse it.
+// Wrap host-rendered HTML in a minimal, isolated document for the srcdoc iframe.
+function wrapHtml(inner) {
+  return '<!doctype html><html><head><meta charset="utf-8">' +
+    '<style>body{font:14px/1.5 system-ui,-apple-system,sans-serif;margin:16px;color:#111;background:#fff}' +
+    'img{max-width:100%}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}</style>' +
+    `</head><body>${inner || ''}</body></html>`;
+}
+
+// Resolve how to preview the document. The host `resolveDocumentUrl` adapter runs
+// first (per-block pull hook) and may return a URL (string / `{ url }`) or fully
+// rendered `{ html }` (e.g. docx/xlsx converted client-side). Otherwise we use
+// the built-in default (native PDF / Office Online viewer). The File from the
+// last upload/drop is passed along so a host can render it without re-fetching.
 async function resolveViewer() {
   const url = props.block.data.url;
   const type = docType.value;
-  if (!url) { viewerUrl.value = ''; return; }
+  if (!url) { viewerUrl.value = ''; viewerHtml.value = ''; return; }
   const resolver = ctx.adapters.value.resolveDocumentUrl;
-  let resolved = '';
+  let resolved = null;
   if (typeof resolver === 'function') {
+    resolving.value = true;
     try {
-      const r = await resolver({ url, type, name: props.block.data.name || '', blockId: props.block.id });
-      resolved = typeof r === 'string' ? r : (r && r.url) || '';
-    } catch { /* fall back to the default below */ }
+      resolved = await resolver({ url, type, name: props.block.data.name || '', blockId: props.block.id, file: lastFile });
+    } catch { /* fall back to the default below */ } finally {
+      resolving.value = false;
+    }
   }
-  if (!resolved) resolved = defaultViewerUrl(url, type);
-  viewerUrl.value = resolved;
-  props.block.data.viewerUrl = resolved; // persisted so export can reuse it
+  if (resolved && typeof resolved === 'object' && resolved.html != null) {
+    viewerHtml.value = wrapHtml(resolved.html);
+    viewerUrl.value = '';
+    props.block.data.viewerUrl = '';
+    return;
+  }
+  const u = typeof resolved === 'string' ? resolved : (resolved && resolved.url) || '';
+  viewerHtml.value = '';
+  viewerUrl.value = u || defaultViewerUrl(url, type);
+  props.block.data.viewerUrl = viewerUrl.value; // persisted so export can reuse it
 }
 watch(() => [props.block.data.url, docType.value], resolveViewer, { immediate: true });
 
@@ -152,6 +185,7 @@ function nameFromUrl(url) {
 }
 
 async function upload(file) {
+  lastFile = file; // kept for the resolver so a host can render it directly
   const r = await ctx.adapters.value.upload(file);
   const url = typeof r === 'string' ? r : r.url;
   props.block.data.url = url;

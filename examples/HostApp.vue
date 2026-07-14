@@ -230,15 +230,36 @@ function fileToDataURL(file) {
 const adapters = {
   upload: async (file) => ({ url: await fileToDataURL(file), name: file.name }),
   // Per-document pull hook for the Document block. The component ships a default
-  // (native PDF + Microsoft Office Online viewer); a host can resolve/proxy/sign
-  // URLs here instead. This demo routes public Office/ODF files through Google's
-  // viewer and serves PDFs directly — real apps would return a signed URL from
-  // their storage. Return '' to let the component fall back to its default.
-  resolveDocumentUrl: async ({ url, type }) => {
-    if (type === 'pdf') return url;
+  // (native PDF + Microsoft Office Online viewer); a host resolves/renders here
+  // instead. Since our demo "uploads" are local data URLs (not public), the
+  // Office Online / Google viewers can't fetch them — so we render docx/xlsx
+  // *client-side* and hand back `{ html }`. Real apps can just return a signed
+  // public URL from their storage. Return '' to fall back to the default.
+  resolveDocumentUrl: async ({ url, type, file }) => {
+    if (type === 'pdf') return url; // PDFs render natively (data/blob/http)
     const isPublic = /^https?:\/\//i.test(url);
+    try {
+      if (type === 'word') {
+        const mammoth = await import('https://esm.sh/mammoth@1.8.0');
+        const buf = file ? await file.arrayBuffer() : await (await fetch(url)).arrayBuffer();
+        const { value } = await mammoth.convertToHtml({ arrayBuffer: buf });
+        return { html: value };
+      }
+      if (type === 'excel') {
+        const XLSX = await import('https://esm.sh/xlsx@0.18.5');
+        const buf = file ? await file.arrayBuffer() : await (await fetch(url)).arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        const html = wb.SheetNames
+          .map((n) => `<h3>${n}</h3>${XLSX.utils.sheet_to_html(wb.Sheets[n])}`)
+          .join('');
+        return { html };
+      }
+    } catch (e) {
+      log(`document render failed: ${e.message}`);
+    }
+    // pptx/odp have no lightweight client renderer — use a viewer if public.
     if (isPublic && type) return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
-    return ''; // data:/blob: (our demo uploads) can't be viewed remotely
+    return '';
   },
   fetchContacts: async (q) => {
     const all = [

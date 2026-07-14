@@ -137,7 +137,7 @@ server itself.
 - **`adapters.upload(file) → { url } | url`** — store dropped/selected media anywhere (S3, your API, an object URL). Without it, media blocks fall back to a URL field.
 - **`adapters.fetchContacts(query) → contact[]`** — power mentions / a contact block.
 - **`adapters.fetchEmbedMeta(url) → { title, image, … }`** — power bookmark previews.
-- **`adapters.resolveDocumentUrl({ url, type, name, blockId }) → url | { url }`** — resolve how the **Document** block previews a file (proxy/sign a URL, or pick a viewer). Optional; without it the component uses a built-in default (native PDF + Microsoft Office Online viewer, with a download fallback when a URL isn't publicly reachable).
+- **`adapters.resolveDocumentUrl({ url, type, name, blockId, file }) → url | { url } | { html }`** — resolve how the **Document** block previews a file. Return a URL (string or `{ url }`) to embed in an iframe, or `{ html }` to render **client-side** output (e.g. convert a dropped `.docx`/`.xlsx` with a lib like `mammoth`/SheetJS and hand back HTML — shown in an isolated, sandboxed iframe). `file` is the original `File` from the last upload/drop (or re-fetch `url`). Optional; without it the component uses a built-in default (native PDF + Microsoft Office Online viewer, with a download fallback when a URL isn't publicly reachable). The example ([HostApp.vue](examples/HostApp.vue)) renders docx/xlsx locally this way, since local uploads aren't public URLs.
 - **Collaboration / comments / history** — consumed via events + adapters; the component provides hooks, the host provides transport/storage.
 
 See [`examples/HostApp.vue`](examples/HostApp.vue) for a working host app that
