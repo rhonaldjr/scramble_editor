@@ -572,6 +572,11 @@ video, embeds…), has a background **color or image** and an aspect ratio (16:9
 4:3 / auto), and the deck's **▶ Present** button opens a full-screen slideshow
 (← / → to navigate, **Esc** to exit); **+ Add slide** appends one.
 
+Media added to a slide (image / video / document / web page / embed) **auto-fits
+the slide**, scaled to contain while keeping its aspect ratio — so nothing
+overflows. Drag the corner (or set a width in the ⚙ gear) to resize it
+explicitly; the gear's **Fit to slide** button reverts to auto-fit.
+
 Any block can have a background too — via the block handle menu (**Background
 color** / **Background image…**) or programmatically:
 

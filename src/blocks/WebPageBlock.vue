@@ -1,5 +1,5 @@
 <template>
-  <div class="sc-webpage">
+  <div class="sc-webpage" :class="{ 'sc-fit': fit }">
     <div v-if="block.data.url" class="sc-webpage__wrap" :style="frameStyle">
       <iframe
         class="sc-webpage__frame"
@@ -25,6 +25,10 @@
             <span>Height</span>
             <input type="number" min="120" step="10" :value="block.data.height || 480" @change="setDim('height', $event.target.value)" />
           </label>
+          <div v-if="inSlide" class="sc-media-gear__row">
+            <span>Slide</span>
+            <button class="sc-media-gear__btn" :class="{ 'is-active': fit }" @mousedown.prevent="fitToSlide">Fit to slide</button>
+          </div>
         </div>
       </template>
     </div>
@@ -41,16 +45,29 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useEditor } from '../composables/editor.js';
+import { useSlideFit } from '../composables/useSlideFit.js';
 
 const props = defineProps({ block: { type: Object, required: true } });
 const ctx = useEditor();
 const readonly = computed(() => ctx.readonly.value);
 const showGear = ref(false);
 
-const frameStyle = computed(() => ({
-  width: props.block.data.width ? `${props.block.data.width}px` : '100%',
-  height: `${props.block.data.height || 480}px`,
-}));
+const { inSlide } = useSlideFit();
+const fit = computed(() => inSlide && !props.block.data.width);
+const frameStyle = computed(() => {
+  if (fit.value) return {}; // slide CSS sizes it to contain
+  return {
+    width: props.block.data.width ? `${props.block.data.width}px` : '100%',
+    height: `${props.block.data.height || 480}px`,
+  };
+});
+
+function fitToSlide() {
+  props.block.data.width = null;
+  props.block.data.height = null;
+  ctx.emitEvent('media:resized', { id: props.block.id, width: null, height: null, fit: true });
+  changed();
+}
 
 function changed() {
   ctx.emitEvent('block:updated', { id: props.block.id });

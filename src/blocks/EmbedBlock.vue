@@ -1,5 +1,5 @@
 <template>
-  <div class="sc-embed">
+  <div class="sc-embed" :class="{ 'sc-fit': fit }">
     <div v-if="block.data.url" class="sc-embed__wrap" :style="frameStyle">
       <iframe class="sc-embed__frame" :src="src" frameborder="0" allowfullscreen />
       <template v-if="!readonly">
@@ -14,6 +14,10 @@
             <span>Width</span>
             <input type="number" min="120" step="10" placeholder="auto" :value="block.data.width || ''" @change="setWidth($event.target.value)" />
           </label>
+          <div v-if="inSlide" class="sc-media-gear__row">
+            <span>Slide</span>
+            <button class="sc-media-gear__btn" :class="{ 'is-active': fit }" @mousedown.prevent="fitToSlide">Fit to slide</button>
+          </div>
         </div>
       </template>
     </div>
@@ -32,6 +36,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useEditor } from '../composables/editor.js';
 import { youtubeId } from '../core/embed.js';
 import { startMediaResize } from '../composables/useMediaResize.js';
+import { useSlideFit } from '../composables/useSlideFit.js';
 
 const props = defineProps({ block: { type: Object, required: true } });
 const ctx = useEditor();
@@ -41,7 +46,15 @@ const src = computed(() => {
   const id = youtubeId(props.block.data.url);
   return id ? `https://www.youtube.com/embed/${id}` : props.block.data.url;
 });
+const { inSlide } = useSlideFit();
+const fit = computed(() => inSlide && !props.block.data.width);
 const frameStyle = computed(() => (props.block.data.width ? { width: `${props.block.data.width}px` } : {}));
+
+function fitToSlide() {
+  props.block.data.width = null;
+  changed();
+  ctx.emitEvent('media:resized', { id: props.block.id, width: null, fit: true });
+}
 
 function changed() {
   ctx.emitEvent('block:updated', { id: props.block.id });

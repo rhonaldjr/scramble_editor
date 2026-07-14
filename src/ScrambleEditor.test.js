@@ -189,6 +189,42 @@ test('slide/deck export to HTML with a background through the editor', async () 
   expect(html).toContain('Slide one');
 });
 
+test('media inside a slide auto-fits (sc-fit, no fixed width) until resized', async () => {
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{
+      id: 'deck', type: 'slides', data: {}, props: {}, children: [
+        { id: 's1', type: 'slide', data: {}, props: {}, children: [
+          { id: 'img', type: 'image', data: { url: 'http://x/a.png', width: null, align: 'left' }, props: {}, children: [] },
+        ] },
+      ],
+    }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  const fig = wrapper.find('.sc-media');
+  expect(fig.classes()).toContain('sc-fit');           // fits the slide by default
+  expect(fig.find('.sc-media__frame').attributes('style') || '').not.toContain('width:'); // no fixed px width
+
+  // Give it an explicit width → drops fit, uses its own size (resizable)
+  doc.blocks[0].children[0].children[0].data.width = 240;
+  await wrapper.setProps({ modelValue: JSON.parse(JSON.stringify(doc)) });
+  await nextTick();
+  const fig2 = wrapper.find('.sc-media');
+  expect(fig2.classes()).not.toContain('sc-fit');
+  expect(fig2.find('.sc-media__frame').attributes('style')).toContain('width: 240px');
+});
+
+test('the same image outside a slide is not fit-constrained', async () => {
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{ id: 'img', type: 'image', data: { url: 'http://x/a.png', width: null }, props: {}, children: [] }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  expect(wrapper.find('.sc-media').classes()).not.toContain('sc-fit');
+});
+
 test('readonly renders without contenteditable', async () => {
   const wrapper = mount(ScrambleEditor, { props: { modelValue: sampleDoc(), readonly: true } });
   await flushPromises();

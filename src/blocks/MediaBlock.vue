@@ -1,5 +1,5 @@
 <template>
-  <figure class="sc-media" :class="`sc-media--align-${block.data.align || 'left'}`">
+  <figure class="sc-media" :class="[`sc-media--align-${block.data.align || 'left'}`, { 'sc-fit': fit }]">
     <template v-if="block.data.url">
       <div class="sc-media__frame" :style="frameStyle">
         <img v-if="kind === 'image'" class="sc-media__img" :src="block.data.url" :alt="block.data.caption || ''" />
@@ -44,6 +44,10 @@
               <span>Width</span>
               <input type="number" min="80" step="10" placeholder="auto" :value="block.data.width || ''" @change="setWidth($event.target.value)" />
             </label>
+            <div v-if="resizable && inSlide" class="sc-media-gear__row">
+              <span>Slide</span>
+              <button class="sc-media-gear__btn" :class="{ 'is-active': fit }" @mousedown.prevent="fitToSlide">Fit to slide</button>
+            </div>
             <label v-for="o in videoOpts" :key="o.key" class="sc-media-gear__row sc-media-gear__check">
               <input type="checkbox" :checked="opt(o.key, o.def)" @change="setOption(o.key, $event.target.checked)" />
               {{ o.label }}
@@ -75,6 +79,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useEditor } from '../composables/editor.js';
 import { startMediaResize } from '../composables/useMediaResize.js';
+import { useSlideFit } from '../composables/useSlideFit.js';
 
 const props = defineProps({
   block: { type: Object, required: true },
@@ -100,7 +105,15 @@ const videoOpts =
         { key: 'muted', label: 'Muted', def: false },
       ]
     : [];
+const { inSlide } = useSlideFit();
+const fit = computed(() => inSlide && !props.block.data.width && (props.kind === 'image' || props.kind === 'video'));
 const frameStyle = computed(() => (props.block.data.width ? { width: `${props.block.data.width}px` } : {}));
+
+function fitToSlide() {
+  props.block.data.width = null; // clear explicit size → CSS contains it in the slide
+  ctx.emitEvent('media:resized', { id: props.block.id, width: null, fit: true });
+  changed();
+}
 
 function opt(k, d = false) {
   const o = props.block.data.options || {};

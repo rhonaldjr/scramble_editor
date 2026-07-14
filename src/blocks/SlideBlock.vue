@@ -44,9 +44,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, provide, onMounted, onBeforeUnmount } from 'vue';
 import { useEditor } from '../composables/editor.js';
 import BlockView from '../components/BlockView.vue';
+
+// Tell descendant media blocks they live in a slide, so they auto-fit it.
+provide('scInSlide', true);
 
 const SWATCHES = [
   { label: 'None', value: '' },

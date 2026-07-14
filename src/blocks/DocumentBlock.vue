@@ -1,5 +1,5 @@
 <template>
-  <div class="sc-document">
+  <div class="sc-document" :class="{ 'sc-fit': fit }">
     <div v-if="block.data.url" class="sc-document__wrap" :style="frameStyle">
       <div class="sc-document__bar">
         <span class="sc-document__type">{{ icon }} {{ label }}</span>
@@ -61,6 +61,10 @@
             <span>Height</span>
             <input type="number" min="160" step="10" :value="block.data.height || 480" @change="setDim('height', $event.target.value)" />
           </label>
+          <div v-if="inSlide" class="sc-media-gear__row">
+            <span>Slide</span>
+            <button class="sc-media-gear__btn" :class="{ 'is-active': fit }" @mousedown.prevent="fitToSlide">Fit to slide</button>
+          </div>
         </div>
       </template>
     </div>
@@ -86,6 +90,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useEditor } from '../composables/editor.js';
 import { detectDocType, docTypeLabel, docTypeIcon, defaultViewerUrl } from '../core/documents.js';
+import { useSlideFit } from '../composables/useSlideFit.js';
 
 const ACCEPT = '.pdf,.doc,.docx,.odt,.rtf,.ppt,.pptx,.odp,.xls,.xlsx,.ods,.csv';
 
@@ -103,10 +108,22 @@ const hasUploader = computed(() => typeof ctx.adapters.value.upload === 'functio
 const docType = computed(() => props.block.data.docType || detectDocType(props.block.data.name || props.block.data.url));
 const label = computed(() => docTypeLabel(docType.value));
 const icon = computed(() => docTypeIcon(docType.value));
-const frameStyle = computed(() => ({
-  width: props.block.data.width ? `${props.block.data.width}px` : '100%',
-  height: `${props.block.data.height || 480}px`,
-}));
+const { inSlide } = useSlideFit();
+const fit = computed(() => inSlide && !props.block.data.width);
+const frameStyle = computed(() => {
+  if (fit.value) return {}; // slide CSS sizes it to contain
+  return {
+    width: props.block.data.width ? `${props.block.data.width}px` : '100%',
+    height: `${props.block.data.height || 480}px`,
+  };
+});
+
+function fitToSlide() {
+  props.block.data.width = null;
+  props.block.data.height = null;
+  ctx.emitEvent('media:resized', { id: props.block.id, width: null, height: null, fit: true });
+  changed();
+}
 
 // Wrap host-rendered HTML in a minimal, isolated document for the srcdoc iframe.
 function wrapHtml(inner) {

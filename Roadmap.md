@@ -216,6 +216,7 @@ Build slide-deck documents with multimedia, and give any block a background.
 - [x] `slides` deck (container): holds `slide` children; **▶ Present** enters a full-screen slideshow (←/→ to navigate, Esc to exit); **+ Add slide**
 - [x] `initChildren` registry hook so a slash-inserted container seeds its initial children (deck → one slide → a paragraph); focus the first editable descendant
 - [x] Exporters: slides/slide → HTML sections (backgrounds inline) and Markdown (`---`-separated); registered in the slash menu
+- [x] Media in a slide auto-fits it (image/video/document/web page/embed contained, aspect ratio kept) until explicitly resized; ⚙ "Fit to slide" reverts — `useSlideFit` + `scInSlide` provide + slide flex/`object-fit` CSS
 - [ ] Verify (browser): build a deck, drop media into slides, set backgrounds, present full-screen, export
 
 <!-- BlockView rowStyle reads props.backgroundColor/backgroundImage. HandleMenu
