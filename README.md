@@ -171,8 +171,17 @@ registered by the host in [`examples/HostApp.vue`](examples/HostApp.vue).
 
 paragraph, heading 1–3, quote, bulleted/numbered/checklist, toggle, callout,
 banner, divider, code (highlight.js), image/video/audio/file (upload + resize +
-gear), embed, bookmark, table, table-of-contents, columns, page-link — plus your
-own via `registerBlock`.
+gear), embed, bookmark, **web page** (live URL preview — resize freely, change
+the URL from the ⚙ gear), table, table-of-contents, columns, page-link — plus
+your own via `registerBlock`.
+
+### Pasting web content
+
+Pasting rich HTML (e.g. copied from a web page) is imported as **structured
+blocks** — headings, paragraphs, lists, quotes, code, tables and images each
+become their own block rather than one flattened paragraph. Structural marks
+(bold/italic/underline/strike/code) and links are kept; stray inline colors from
+the source are dropped. See [src/core/html-import.js](src/core/html-import.js).
 
 ## Status
 

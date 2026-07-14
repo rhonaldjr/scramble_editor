@@ -8,6 +8,7 @@ import Callout from './Callout.vue';
 import MediaBlock from './MediaBlock.vue';
 import EmbedBlock from './EmbedBlock.vue';
 import BookmarkBlock from './BookmarkBlock.vue';
+import WebPageBlock from './WebPageBlock.vue';
 import TableBlock from './TableBlock.vue';
 import TocBlock from './TocBlock.vue';
 import Columns from './Columns.vue';
@@ -17,6 +18,7 @@ import { registerBlock, hasBlock } from '../core/registry.js';
 import { createSegment, normalizeSegments } from '../core/segments.js';
 import {
   esc, mediaMarkdown, mediaHTML, embedMarkdown, embedHTML, bookmarkMarkdown, bookmarkHTML,
+  webpageMarkdown, webpageHTML,
   tableMarkdown, tableHTML, tocMarkdown, tocHTML, pageLinkMarkdown, pageLinkHTML,
 } from '../core/block-exporters.js';
 
@@ -148,6 +150,12 @@ export function registerBuiltins() {
     type: 'bookmark', label: 'Bookmark', icon: '🔖', group: null,
     component: BookmarkBlock, create: (d = {}) => ({ url: d.url || '', meta: d.meta || null }),
     toMarkdown: bookmarkMarkdown, toHTML: bookmarkHTML,
+  });
+  registerBlock({
+    type: 'webpage', label: 'Web page', icon: '🌐', group: null,
+    component: WebPageBlock,
+    create: (d = {}) => ({ url: d.url || '', width: d.width || null, height: d.height || 480 }),
+    toMarkdown: webpageMarkdown, toHTML: webpageHTML,
   });
 
   // Table + TOC

@@ -60,6 +60,7 @@ import {
   splitSegmentsAt, sliceSegments, concatSegments, segmentsLength, isEmptySegments, normalizeSegments, segmentsText,
 } from './core/segments.js';
 import { toMarkdown, toHTML } from './core/exporter.js';
+import { htmlToBlocks, textToBlocks } from './core/html-import.js';
 
 registerBuiltins();
 
@@ -268,6 +269,57 @@ function splitBlock(id, offset) {
   requestFocus(nb.id, 0);
   emitEvent('block:created', { id: nb.id, after: id });
   markChanged();
+}
+
+// Paste rich HTML (or plain text) as structured blocks at the caret. A single
+// inline fragment is spliced into the current block; multi-block content splits
+// the current block and inserts real blocks in between (preserving structure).
+function pasteHTML(id, offset, html, plainText) {
+  let descriptors = html ? htmlToBlocks(html) : [];
+  if (!descriptors.length && plainText) descriptors = textToBlocks(plainText);
+  descriptors = descriptors.filter(Boolean);
+  if (!descriptors.length) return false;
+
+  const loc = model.findBlock(doc.blocks, id);
+  if (!loc) return false;
+  const def = getBlock(loc.block.type);
+  const editable = def && def.editableText;
+
+  // Fast path: a single paragraph pasted into editable text → splice segments.
+  if (editable && descriptors.length === 1 && descriptors[0].type === 'paragraph') {
+    const pasted = descriptors[0].data.segments;
+    const [before, after] = splitSegmentsAt(loc.block.data.segments, offset);
+    loc.block.data.segments = normalizeSegments([...before, ...pasted, ...after]);
+    requestFocus(id, offset + segmentsLength(pasted));
+    emitEvent('block:updated', { id });
+    markChanged();
+    return true;
+  }
+
+  const created = descriptors.map((d) => createBlock(d.type, d.data));
+  let anchor = id;
+  const insertAll = () => created.forEach((b) => { model.insertAfter(doc.blocks, anchor, b); anchor = b.id; });
+
+  if (editable && segmentsLength(loc.block.data.segments) === 0) {
+    // Empty target block → replace it with the pasted blocks.
+    insertAll();
+    model.removeBlock(doc.blocks, id);
+  } else if (editable) {
+    const [before, after] = splitSegmentsAt(loc.block.data.segments, offset);
+    loc.block.data.segments = before.length ? before : [{ text: '', marks: [] }];
+    insertAll();
+    if (segmentsLength(after) > 0) {
+      const tail = createBlock('paragraph', { segments: after });
+      model.insertAfter(doc.blocks, anchor, tail);
+      anchor = tail.id;
+    }
+  } else {
+    insertAll();
+  }
+  requestFocus(anchor, 0);
+  emitEvent('block:created', { ids: created.map((b) => b.id), after: id });
+  markChanged();
+  return true;
 }
 
 function mergeWithPrevious(id) {
@@ -617,7 +669,7 @@ const ctx = {
   doc, config, adapters, readonly, focusRequest, drag, handle, rootEl,
   isEnabled, emitEvent, markChanged, requestFocus, clearFocus,
   createBlock, splitBlock, mergeWithPrevious, indent, outdent, moveBlock, removeBlock,
-  focusPrevious, focusNext, slashPick,
+  focusPrevious, focusNext, slashPick, pasteHTML,
   // V4
   turnInto: turnIntoBlock, turnIntoTargets, duplicate, moveUp: moveUpBlock, moveDown: moveDownBlock,
   setColor, copyLink, openHandleMenu, closeHandleMenu,

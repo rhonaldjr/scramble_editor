@@ -8,6 +8,7 @@
       :contenteditable="!readonly"
       @input="onInput"
       @keydown="onKeydown"
+      @paste="onPaste"
     />
   </div>
 </template>
@@ -24,5 +25,5 @@ const props = defineProps({
 
 const ctx = useEditor();
 const readonly = computed(() => ctx.readonly.value);
-const { el, onInput, onKeydown } = useEditableText(props.block, ctx);
+const { el, onInput, onKeydown, onPaste } = useEditableText(props.block, ctx);
 </script>

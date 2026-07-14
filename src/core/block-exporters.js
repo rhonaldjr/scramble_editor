@@ -52,6 +52,16 @@ export function embedHTML(b) {
   return `<iframe class="sc-embed__frame" src="${src}"${style} frameborder="0" allowfullscreen></iframe>`;
 }
 
+export function webpageMarkdown(b) {
+  return b.data.url ? `[${b.data.url}](${b.data.url})` : '';
+}
+export function webpageHTML(b) {
+  if (!b.data.url) return '';
+  const w = b.data.width ? `${Number(b.data.width)}px` : '100%';
+  const h = `${Number(b.data.height) || 480}px`;
+  return `<iframe class="sc-webpage__frame" src="${escAttr(b.data.url)}" style="width:${w};height:${h};border:0" loading="lazy"></iframe>`;
+}
+
 export function bookmarkMarkdown(b) {
   if (!b.data.url) return '';
   return `[${(b.data.meta && b.data.meta.title) || b.data.url}](${b.data.url})`;

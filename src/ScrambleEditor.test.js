@@ -45,6 +45,22 @@ test('footer slot receives the word count', async () => {
   expect(wrapper.vm.getWordCount().words).toBe(2);
 });
 
+test('pasting rich HTML inserts structured blocks instead of flattening', async () => {
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: sampleDoc() } });
+  await flushPromises();
+  const target = wrapper.findAll('[data-role="content"]')[1]; // the 'World' paragraph
+  const html = '<h2>Section</h2><p>Body</p><ul><li>Item</li></ul>';
+  const event = new Event('paste', { bubbles: true, cancelable: true });
+  event.clipboardData = { getData: (t) => (t === 'text/html' ? html : 'Section Body Item') };
+  target.element.dispatchEvent(event);
+  await flushPromises();
+  await nextTick();
+  const types = wrapper.vm.getDocument().blocks.map((b) => b.type);
+  expect(types).toContain('heading-2');
+  expect(types).toContain('bulleted-list');
+  expect(wrapper.vm.getMarkdown()).toContain('## Section');
+});
+
 test('readonly renders without contenteditable', async () => {
   const wrapper = mount(ScrambleEditor, { props: { modelValue: sampleDoc(), readonly: true } });
   await flushPromises();

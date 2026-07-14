@@ -98,7 +98,9 @@ examples/                   # host apps consuming the component (Gallery + Minim
 
 Special blocks: `columns` (children are `column` blocks), `table`
 (`data.rows` = 2D cell-segment arrays), `toc` (renders from headings),
-`page-link` (`data.docId`), media/embed (`data.url` + host-provided metadata).
+`page-link` (`data.docId`), media/embed (`data.url` + host-provided metadata),
+`webpage` (`data.url` + `width`/`height` — live iframe preview). Rich-HTML paste
+is imported to structured blocks via `core/html-import.js`.
 
 ## Block Registry Contract
 

@@ -118,6 +118,20 @@ export function useEditableText(block, ctx) {
     ctx.markChanged();
   }
 
+  function onPaste(event) {
+    if (ctx.readonly.value) return;
+    const cd = event.clipboardData;
+    if (!cd) return;
+    const html = cd.getData('text/html');
+    const text = cd.getData('text/plain');
+    if (!html && !text) return;
+    // Take over paste so rich HTML becomes structured blocks (the browser's
+    // default would dump styled markup into one contenteditable and flatten it).
+    event.preventDefault();
+    const offset = caretOffset(el.value);
+    ctx.pasteHTML(block.id, offset, html, text);
+  }
+
   function onKeydown(event) {
     if (ctx.readonly.value) return;
     const offset = caretOffset(el.value);
@@ -137,5 +151,5 @@ export function useEditableText(block, ctx) {
     }
   }
 
-  return { el, onInput, onKeydown };
+  return { el, onInput, onKeydown, onPaste };
 }

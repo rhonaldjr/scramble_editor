@@ -6,12 +6,16 @@
   interface (v-model, events, adapters, template-ref methods):
 
     • Persistence  — load on mount + autosave to localStorage on @change.
-    • Uploads      — an `upload` adapter (here: object URLs; use your storage).
+    • Uploads      — an `upload` adapter (here: data URLs so media survives a
+                     refresh; use your storage/CDN in a real app).
     • Contacts     — a `fetchContacts` adapter (here: a static list).
     • Events       — an audit log built from the catch-all @event.
     • Control      — enable/disable features, readonly, imperative get/set/export.
 
-  Swap localStorage / object URLs for your real backend and nothing about the
+  Paste a rich web page into the editor and it becomes structured blocks
+  (headings/lists/tables), and the "Web page" slash block previews any URL.
+
+  Swap localStorage / data URLs for your real backend and nothing about the
   component changes.
 -->
 <template>
@@ -158,7 +162,9 @@ function defaultDoc() {
       { id: 'h', type: 'heading-1', data: { segments: [{ text: 'Scramble in a host app', marks: [] }] }, props: {}, children: [] },
       { id: 'p', type: 'paragraph', data: { segments: [{ text: 'This app owns persistence + uploads. The component only exposes the interface.', marks: [] }] }, props: {}, children: [] },
       { id: 'l', type: 'checklist', data: { segments: [{ text: 'Autosaves to localStorage', marks: [] }], checked: true }, props: {}, children: [] },
+      { id: 'tip', type: 'paragraph', data: { segments: [{ text: 'Try pasting a rich web page here — headings, lists and tables keep their structure.', marks: [] }] }, props: {}, children: [] },
       { id: 'ct', type: 'contact', data: { contact: null }, props: {}, children: [] },
+      { id: 'w', type: 'webpage', data: { url: 'https://example.com', width: null, height: 360 }, props: {}, children: [] },
       { id: 'i', type: 'image', data: { url: '', caption: '' }, props: {}, children: [] },
     ],
   };
@@ -204,9 +210,20 @@ function reset() {
 }
 
 // --- adapters (host provides the backend) ---
+// Persistence gotcha: `URL.createObjectURL(file)` returns a `blob:` URL that is
+// revoked on reload — media would break after a refresh. For a persistence demo
+// we inline the file as a data URL so it round-trips through localStorage. A
+// real app uploads to storage/CDN and stores the returned durable URL instead.
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 const adapters = {
-  // Replace with a real upload to your storage/CDN and return the URL.
-  upload: async (file) => ({ url: URL.createObjectURL(file), name: file.name }),
+  upload: async (file) => ({ url: await fileToDataURL(file), name: file.name }),
   fetchContacts: async (q) => {
     const all = [
       { id: 'c1', name: 'Jane Cooper', email: 'jane@example.com' },

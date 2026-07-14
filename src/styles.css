@@ -166,6 +166,9 @@
 .sc-embed__wrap { position: relative; display: inline-block; width: 100%; max-width: 100%; vertical-align: top; }
 .sc-embed__frame { width: 100%; aspect-ratio: 16 / 9; min-height: 220px; border: 0; border-radius: 6px; display: block; }
 .sc-embed .sc-media__url { margin-top: 6px; }
+.sc-webpage__wrap { position: relative; display: block; width: 100%; max-width: 100%; }
+.sc-webpage__frame { width: 100%; height: 100%; border: 0; border-radius: 6px; display: block; background: var(--sc-bg); }
+.sc-webpage .sc-media__url { margin-top: 6px; }
 .sc-bookmark { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--sc-faint); border-radius: 6px; text-decoration: none; color: inherit; }
 .sc-bookmark__title { font-weight: 600; }
 .sc-bookmark__desc, .sc-bookmark__host { color: var(--sc-muted); font-size: 0.85em; margin-top: 2px; }
