@@ -45,6 +45,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { getBlock } from '../core/registry.js';
+import { findBlock } from '../core/model.js';
 import { TEXT_COLORS, BG_COLORS } from '../core/colors.js';
 import { headingLevel, visibleAfterCollapse } from '../core/collapse.js';
 import { useEditor } from '../composables/editor.js';
@@ -103,9 +104,24 @@ function onDragStart(e) {
 function onDragEnd() {
   ctx.drag.id = null;
 }
+// Columns are only offered when the gesture is deliberate: never for list items
+// (they reorder vertically), never onto a container, and only in a narrow band
+// at the far left/right edge.
+function draggedDef() {
+  if (!ctx.drag.id) return null;
+  const loc = findBlock(ctx.doc.blocks, ctx.drag.id);
+  return loc ? getBlock(loc.block.type) : null;
+}
+function canMakeColumns() {
+  const dd = draggedDef();
+  if (def.value.listMarker || (dd && dd.listMarker)) return false; // list reorder stays vertical
+  if (def.value.container) return false; // don't drop columns onto columns/column
+  return true;
+}
 function sideOf(e, rect) {
+  if (!canMakeColumns()) return null;
   const x = e.clientX - rect.left;
-  const zone = rect.width * 0.22;
+  const zone = Math.min(rect.width * 0.15, 56); // narrow edge band
   if (x < zone) return 'left';
   if (x > rect.width - zone) return 'right';
   return null;

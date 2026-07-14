@@ -58,9 +58,9 @@
       v-else-if="!readonly"
       class="sc-media__drop"
       :class="{ 'is-over': over }"
-      @dragover.prevent="over = true"
+      @dragover.prevent.stop="over = true"
       @dragleave="over = false"
-      @drop.prevent="onDrop"
+      @drop.prevent.stop="onDrop"
     >
       <label v-if="hasUploader" class="sc-media__btn">
         <input type="file" :accept="accept" hidden @change="onPick" />
@@ -74,6 +74,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useEditor } from '../composables/editor.js';
+import { startMediaResize } from '../composables/useMediaResize.js';
 
 const props = defineProps({
   block: { type: Object, required: true },
@@ -140,21 +141,7 @@ async function onPick(e) { const f = e.target.files && e.target.files[0]; if (f 
 async function onDrop(e) { over.value = false; const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f && hasUploader.value) await upload(f); }
 
 function startResize(e) {
-  const frame = e.currentTarget.closest('.sc-media__frame');
-  const startX = e.clientX;
-  const startW = frame.getBoundingClientRect().width;
-  const onMove = (ev) => {
-    const w = Math.max(80, Math.round(startW + (ev.clientX - startX)));
-    props.block.data.width = w;
-    ctx.emitEvent('media:resized', { id: props.block.id, width: w });
-  };
-  const onUp = () => {
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
-    changed();
-  };
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
+  startMediaResize(e, e.currentTarget.closest('.sc-media__frame'), props.block, ctx);
 }
 
 function closeGear(e) {

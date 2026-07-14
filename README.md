@@ -72,13 +72,19 @@ const adapters = {
 | --- | --- | --- |
 | `v-model` (`modelValue`) | Object | The document — two-way bound. |
 | `config` | Object | `{ blocks?: string[], toolbar?: string[], output?: 'markdown'\|'html', locked?: boolean }`. |
-| `features` | Object | Toggle functionality: `slashMenu`, `shortcuts`, `toolbar`, `dragAndDrop`, `handleMenu`, `multiSelect`, `upload`, `mediaControls`, `pageStyle`. |
+| `features` | Object | Toggle functionality: `slashMenu`, `shortcuts`, `toolbar`, `dragAndDrop`, `handleMenu`, `multiSelect`, `upload`, `mediaControls`, `pageStyle`, `fullscreen`. |
 | `readonly` | Boolean | Render view-only. |
 | `adapters` | Object | Your backend: `upload(file)`, `fetchContacts(q)`, `fetchEmbedMeta(url)`, `listDocuments()`. All optional. |
 | `presence` | Array | Remote users `[{ id, name, color, blockId }]` (collaboration). |
 | `comments` | Array | Comment threads `[{ id, blockId, resolved, messages }]`. |
 | `focusMode` | Boolean | Dim inactive blocks. |
 | `theme` | String | `'auto'` (default) \| `'light'` \| `'dark'`. |
+| `width` | String\|Number | `'normal'` (default) \| `'full'` \| `'half'` \| a number (px) \| any CSS length. Reactive. |
+
+Drop image/video/audio files anywhere on the editor and Scramble uploads them
+(via `adapters.upload`, or an object-URL fallback) and inserts the matching
+media block. Image/video/embed blocks resize by dragging the corner
+(aspect-ratio preserved) or via the ⚙ gear's Width field.
 
 A `#footer` slot receives `{ words, chars }` for a word-count footer.
 
@@ -89,14 +95,20 @@ A `#footer` slot receives `{ words, chars }` for a word-count footer.
 `block-duplicated`, `block-collapsed`, `slash-selected`, `shortcut-applied`,
 `media-uploaded`, `media-resized`, `media-configured`, `selection-blocks`,
 `page-link-open`, `cursor-changed`, `comment-added`, `comment-resolved`,
-`mention-inserted`, … plus a catch-all **`event`** with `{ type, detail }`.
+`mention-inserted`, `fullscreen-changed`, … plus a catch-all **`event`** with
+`{ type, detail }`.
 
 ### Methods (template ref)
 
 `getDocument()`, `setDocument(doc)`, `getMarkdown()`, `getHTML()`,
 `getExport()` (per `config.output`), `getWordCount()`, `setStyle(patch)`,
-`enable(feature)`, `disable(feature)`, `setReadonly(v)`, `focus()`,
+`enable(feature)`, `disable(feature)`, `setReadonly(v)`,
+`setFullscreen(v)` / `toggleFullscreen()` / `isFullscreen()`, `focus()`,
 `registerBlock(def)`.
+
+The built-in **⛶ expand button** (top-right) toggles a Notion-style full-screen
+overlay; press **Esc** to exit. Disable it with `:features="{ fullscreen: false }"`
+and drive it yourself via the methods above / the `fullscreen-changed` event.
 
 ## Bring your own backend
 

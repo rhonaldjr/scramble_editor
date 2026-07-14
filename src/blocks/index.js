@@ -141,7 +141,7 @@ export function registerBuiltins() {
   // Embed + bookmark
   registerBlock({
     type: 'embed', label: 'Embed', icon: '🔗', group: null,
-    component: EmbedBlock, create: (d = {}) => ({ url: d.url || '' }),
+    component: EmbedBlock, create: (d = {}) => ({ url: d.url || '', width: d.width || null }),
     toMarkdown: embedMarkdown, toHTML: embedHTML,
   });
   registerBlock({

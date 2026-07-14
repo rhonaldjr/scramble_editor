@@ -1,5 +1,20 @@
 <template>
-  <div ref="rootEl" class="scramble-editor" :class="rootClasses" @input="onRootInput">
+  <div
+    ref="rootEl"
+    class="scramble-editor"
+    :class="rootClasses"
+    :style="rootStyle"
+    @input="onRootInput"
+    @click="onRootClick"
+    @dragover="onRootDragOver"
+    @drop="onRootDrop"
+  >
+    <button
+      v-if="isEnabled('fullscreen')"
+      class="sc-expand"
+      :title="fullscreen ? 'Exit full screen (Esc)' : 'Full screen'"
+      @mousedown.prevent="toggleFullscreen"
+    >{{ fullscreen ? '✕' : '⛶' }}</button>
     <PageStyle v-if="showPageStyle" />
     <div v-if="presenceUsers.length" class="sc-presence">
       <span
@@ -58,6 +73,7 @@ const props = defineProps({
   comments: { type: Array, default: () => [] },     // threads: [{ id, blockId, resolved, messages:[{author,text,at}] }]
   focusMode: { type: Boolean, default: false },     // dim inactive blocks
   theme: { type: String, default: 'auto' },         // 'auto' | 'light' | 'dark'
+  width: { type: [String, Number], default: 'normal' }, // 'normal' | 'full' | 'half' | number(px) | CSS length
 });
 const emit = defineEmits([
   'update:modelValue', 'ready', 'change', 'event',
@@ -66,7 +82,7 @@ const emit = defineEmits([
   'slash-opened', 'slash-selected', 'shortcut-applied',
   'media-uploaded', 'media-resized', 'media-configured',
   'selection-blocks', 'page-link-open', 'cursor-changed',
-  'comment-added', 'comment-resolved', 'mention-inserted', 'word-count',
+  'comment-added', 'comment-resolved', 'mention-inserted', 'word-count', 'fullscreen-changed',
 ]);
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -100,6 +116,7 @@ function isEnabled(feature) {
 }
 
 const activeBlockId = ref(null); // block with the caret (for focus mode)
+const fullscreen = ref(false); // expand the editor to fill the viewport
 
 // Page style (doc.style) applied as classes on the editor root.
 const rootClasses = computed(() => {
@@ -112,7 +129,27 @@ const rootClasses = computed(() => {
     'sc-focus': Boolean(props.focusMode),
     'sc-dark': props.theme === 'dark',
     'sc-light': props.theme === 'light',
+    'sc-fullscreen': fullscreen.value,
   };
+});
+
+// Full-screen expand (Notion/ClickUp style).
+function setFullscreen(v) {
+  const next = Boolean(v);
+  if (next === fullscreen.value) return;
+  fullscreen.value = next;
+  emitEvent('fullscreen:changed', { fullscreen: next });
+}
+function toggleFullscreen() { setFullscreen(!fullscreen.value); }
+
+// Programmable editor width (max-width). Full screen ignores it (CSS wins).
+const rootStyle = computed(() => {
+  if (fullscreen.value) return {};
+  const w = props.width;
+  if (w == null || w === 'normal') return {};
+  if (w === 'full') return { maxWidth: '100%' };
+  if (w === 'half') return { maxWidth: '50%' };
+  return { maxWidth: typeof w === 'number' ? `${w}px` : String(w) };
 });
 
 // Word / character count (Phase V12).
@@ -485,6 +522,75 @@ function onRootInput() {
   markChanged();
 }
 
+// Clicking the blank area below the last block adds a trailing paragraph (or
+// focuses the last block if it is already an empty text block) — like Notion.
+function onRootClick(e) {
+  if (readonly.value) return;
+  if (e.target !== rootEl.value) return; // only the editor's own blank area
+  if (selection.ids.length) return; // let a stray click clear selection first
+  const blocks = doc.blocks;
+  const last = blocks[blocks.length - 1];
+  if (last) {
+    const wrapper = rootEl.value.querySelector(`.sc-block[data-block-id="${last.id}"]`);
+    if (wrapper && e.clientY < wrapper.getBoundingClientRect().bottom) return; // clicked above content
+    const def = getBlock(last.type);
+    if (def && def.editableText && segmentsLength(last.data.segments) === 0) {
+      requestFocus(last.id, 0);
+      return;
+    }
+  }
+  const para = createBlock('paragraph');
+  blocks.push(para);
+  requestFocus(para.id, 0);
+  emitEvent('block:created', { id: para.id });
+  markChanged();
+}
+
+// Drag & drop local files anywhere on the editor: recognize the type and insert
+// the matching media block (uploaded via adapters.upload, or an object URL as a
+// no-adapter fallback so it still renders).
+function mediaKind(type) {
+  if (/^image\//.test(type)) return 'image';
+  if (/^video\//.test(type)) return 'video';
+  if (/^audio\//.test(type)) return 'audio';
+  return 'file';
+}
+function onRootDragOver(e) {
+  if (readonly.value || !isEnabled('upload')) return;
+  if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault();
+}
+async function onRootDrop(e) {
+  if (readonly.value || !isEnabled('upload')) return;
+  const files = e.dataTransfer && e.dataTransfer.files;
+  if (!files || !files.length) return; // block-reorder drops carry no files
+  e.preventDefault();
+  const upload = adapters.value.upload;
+  const wrapper = e.target.closest && e.target.closest('.sc-block');
+  let anchorId = wrapper ? wrapper.dataset.blockId : (doc.blocks[doc.blocks.length - 1] || {}).id;
+  for (const file of Array.from(files)) {
+    const kind = mediaKind(file.type);
+    try {
+      let url;
+      if (typeof upload === 'function') {
+        const r = await upload(file);
+        url = typeof r === 'string' ? r : r.url;
+      } else {
+        url = URL.createObjectURL(file); // fallback: render the local file
+      }
+      const block = createBlock(kind, { url });
+      if (anchorId) model.insertAfter(doc.blocks, anchorId, block);
+      else doc.blocks.push(block);
+      anchorId = block.id;
+      emitEvent('media:uploaded', { id: block.id, kind, url, name: file.name });
+      emitEvent('block:created', { id: block.id });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[Scramble] file drop failed', err);
+    }
+  }
+  markChanged();
+}
+
 // --- context provided to blocks ---
 const ctx = {
   doc, config, adapters, readonly, focusRequest, drag, handle, rootEl,
@@ -545,12 +651,28 @@ function onCursorMove() {
   emitEvent('cursor:changed', { blockId, offset: pre.toString().length });
 }
 
+// Esc exits full screen — but only when not editing text and nothing is
+// block-selected, so it doesn't steal Esc from those interactions.
+function onGlobalKey(e) {
+  if (e.key !== 'Escape' || !fullscreen.value) return;
+  const editing = document.activeElement && document.activeElement.closest
+    && document.activeElement.closest('[data-role="content"], [data-role="code"], [data-role="cell"], input, textarea, select');
+  if (!editing && selection.ids.length === 0) {
+    setFullscreen(false);
+    e.preventDefault();
+  }
+}
+
 onMounted(() => {
   document.addEventListener('selectionchange', onCursorMove);
+  document.addEventListener('keydown', onGlobalKey);
   emitEvent('editor:ready', { docId: doc.id });
   if (!props.modelValue) markChanged();
 });
-onBeforeUnmount(() => document.removeEventListener('selectionchange', onCursorMove));
+onBeforeUnmount(() => {
+  document.removeEventListener('selectionchange', onCursorMove);
+  document.removeEventListener('keydown', onGlobalKey);
+});
 
 // --- imperative API (template ref) ---
 defineExpose({
@@ -564,6 +686,9 @@ defineExpose({
   enable: (f) => { localFeatures[f] = true; },
   disable: (f) => { localFeatures[f] = false; },
   setReadonly: (v) => { localReadonly.value = v; },
+  setFullscreen,
+  toggleFullscreen,
+  isFullscreen: () => fullscreen.value,
   focus: () => { const first = doc.blocks[0]; if (first) requestFocus(first.id, 0); },
 });
 </script>

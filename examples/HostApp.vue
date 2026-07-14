@@ -41,6 +41,7 @@
           @cursor-changed="onCursor"
           :focus-mode="focusMode"
           :theme="theme"
+          :width="editorWidth"
           @comment-added="onCommentAdded"
           @comment-resolved="onCommentResolved"
           @event="onEvent"
@@ -70,6 +71,13 @@
         <label><input type="checkbox" v-model="focusMode" /> focus mode</label>
         <label>theme
           <select v-model="theme"><option>auto</option><option>light</option><option>dark</option></select>
+        </label>
+        <label>width
+          <select v-model="editorWidth">
+            <option value="normal">normal</option>
+            <option value="full">full (viewport)</option>
+            <option value="half">half</option>
+          </select>
         </label>
 
         <h3>History (host-stored)</h3>
@@ -126,6 +134,7 @@ const savedAt = ref(null);
 const readonly = ref(false);
 const focusMode = ref(false);
 const theme = ref('auto');
+const editorWidth = ref('normal'); // 'normal' | 'full' | 'half' — programmable width
 const features = reactive({ slashMenu: true, shortcuts: true, toolbar: true, dragAndDrop: true });
 // Page config: gates blocks/toolbar and picks the default export format.
 const config = reactive({ output: 'markdown' });

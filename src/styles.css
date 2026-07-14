@@ -37,13 +37,40 @@
 /* focus mode: dim everything except the active block */
 .scramble-editor.sc-focus .sc-dim { opacity: 0.35; transition: opacity 0.15s ease; }
 
+/* full-screen expand (Notion/ClickUp style overlay) */
+.scramble-editor.sc-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  margin: 0;
+  max-width: none;
+  overflow-y: auto;
+  background: var(--sc-bg);
+  padding: 56px max(24px, calc(50% - 380px)) 200px;
+}
+.sc-expand {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 46;
+  border: 1px solid var(--sc-faint);
+  background: var(--sc-bg);
+  color: var(--sc-muted);
+  border-radius: 6px;
+  padding: 3px 9px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.sc-expand:hover { background: var(--sc-faint); }
+
 /* page style (doc.style) */
 .scramble-editor.sc-full-width { max-width: 1100px; }
 .scramble-editor.sc-small-text { font-size: 14px; }
 .scramble-editor.sc-font-serif { font-family: Georgia, 'Times New Roman', serif; }
 .scramble-editor.sc-font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
-.sc-pagestyle { position: absolute; top: 8px; right: 8px; z-index: 45; }
+.sc-pagestyle { position: absolute; top: 8px; right: 44px; z-index: 45; }
 .sc-pagestyle__gear {
   border: 1px solid var(--sc-faint); background: var(--sc-bg); color: var(--sc-muted);
   border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 13px;
@@ -68,7 +95,8 @@
 .sc-block__unknown { color: #c4554d; }
 
 .sc-text { flex: 1; min-width: 0; outline: none; min-height: 1.5em; }
-.sc-text:empty::before { content: 'Type “/” for blocks…'; color: var(--sc-muted); pointer-events: none; }
+/* Placeholder only on the focused empty block (Notion-style) — blank otherwise. */
+.sc-text:empty:focus::before { content: 'Type “/” for blocks…'; color: var(--sc-muted); pointer-events: none; }
 .sc-p { margin: 2px 0; }
 .sc-h1 { font-size: 1.9em; font-weight: 700; margin: 22px 0 4px; }
 .sc-h2 { font-size: 1.5em; font-weight: 600; margin: 18px 0 2px; }
@@ -135,7 +163,7 @@
 
 /* embed + bookmark */
 .sc-embed { flex: 1; min-width: 0; }
-.sc-embed__wrap { position: relative; width: 100%; }
+.sc-embed__wrap { position: relative; display: inline-block; width: 100%; max-width: 100%; vertical-align: top; }
 .sc-embed__frame { width: 100%; aspect-ratio: 16 / 9; min-height: 220px; border: 0; border-radius: 6px; display: block; }
 .sc-embed .sc-media__url { margin-top: 6px; }
 .sc-bookmark { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--sc-faint); border-radius: 6px; text-decoration: none; color: inherit; }

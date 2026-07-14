@@ -48,7 +48,8 @@ export function embedHTML(b) {
   if (!b.data.url) return '';
   const id = youtubeId(b.data.url);
   const src = id ? `https://www.youtube.com/embed/${id}` : escAttr(b.data.url);
-  return `<iframe class="sc-embed__frame" src="${src}" frameborder="0" allowfullscreen></iframe>`;
+  const style = b.data.width ? ` style="width:${Number(b.data.width)}px;aspect-ratio:16/9"` : '';
+  return `<iframe class="sc-embed__frame" src="${src}"${style} frameborder="0" allowfullscreen></iframe>`;
 }
 
 export function bookmarkMarkdown(b) {
