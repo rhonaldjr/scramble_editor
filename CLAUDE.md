@@ -75,7 +75,11 @@ examples/                   # host apps consuming the component (Gallery + Minim
    events; they do not bypass them.
 6. **Config- and feature-driven.** `config` gates available blocks/toolbar;
    `features` (+ `enable/disable`) toggle functionality; `readonly` renders
-   view-only. Never hardcode which blocks/tools exist.
+   view-only. Never hardcode which blocks/tools exist. UI chrome is styled from
+   `--sc-*` design tokens (content: `--sc-text/bg/faint/muted/accent`; chrome:
+   `--sc-btn-*`, `--sc-popover-*`, `--sc-bar-*`, `--sc-radius/border/danger`) —
+   the host overrides them via the `tokens` prop. Never hard-code chrome colors
+   in component CSS; add/consume a token.
 7. **Extensible.** `registerBlock()` is the public API. Custom blocks are Vue
    components authored by consumers.
 
@@ -105,6 +109,9 @@ children are `slide` container blocks — background via `props.backgroundColor`
 (`data.url`/`name`/`docType`/`width`/`height` — pdf/office/odf viewer resolved
 via `adapters.resolveDocumentUrl` or a built-in default; see `core/documents.js`).
 Rich-HTML paste is imported to structured blocks via `core/html-import.js`.
+`button` (`data.label`/`url`/`target`/`action`/`variant`/`textColor`/`bgColor`;
+`action: 'link'` navigates, `'event'` emits `button-clicked` for the host),
+`accordion` (container: `data.segments` title + collapsible children, `props.collapsed`).
 
 ## Block Registry Contract
 
@@ -147,7 +154,7 @@ Typed events (also surfaced via a catch-all `@event` `{ type, detail }`):
 `block-deleted`, `block-moved`, `block-converted`, `block-duplicated`,
 `block-collapsed`, `selection-blocks`, `slash-opened`, `slash-selected`,
 `shortcut-applied`, `media-uploaded`, `media-resized`, `media-configured`,
-`document-added`, `document-configured`, `content-loaded`, `page-link-open`, `block-custom`. Add
+`document-added`, `document-configured`, `content-loaded`, `button-clicked`, `page-link-open`, `block-custom`. Add
 new events here and document the payload where emitted.
 
 ## Testing Expectations

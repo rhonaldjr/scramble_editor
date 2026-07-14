@@ -326,6 +326,53 @@ test('slide gear shows a color selector; empty = transparent, picking sets a hex
   expect(wrapper.vm.getDocument().blocks[0].children[0].props.backgroundColor).toBe('#0b1e3b');
 });
 
+test('tokens prop applies host UI-theme overrides as inline CSS custom properties', async () => {
+  const wrapper = mount(ScrambleEditor, {
+    props: { modelValue: sampleDoc(), tokens: { accent: '#e0218a', 'bar-bg': '#2a0a24', '--sc-radius': '10px' } },
+  });
+  await flushPromises();
+  const root = wrapper.find('.scramble-editor').element;
+  expect(root.style.getPropertyValue('--sc-accent')).toBe('#e0218a');
+  expect(root.style.getPropertyValue('--sc-bar-bg')).toBe('#2a0a24');
+  expect(root.style.getPropertyValue('--sc-radius')).toBe('10px'); // already-prefixed key passes through
+  // reactive: clearing removes the override
+  await wrapper.setProps({ tokens: {} });
+  await nextTick();
+  expect(root.style.getPropertyValue('--sc-accent')).toBe('');
+});
+
+test('button block emits button-clicked with its config', async () => {
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{ id: 'b', type: 'button', data: { label: 'Run', action: 'event', url: '', target: '_self', variant: 'filled' }, props: {}, children: [] }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  await wrapper.find('.sc-button').trigger('click');
+  const evt = wrapper.emitted('button-clicked');
+  expect(evt).toBeTruthy();
+  expect(evt[0][0]).toMatchObject({ id: 'b', label: 'Run', action: 'event' });
+});
+
+test('accordion toggles its body and renders editable title + children', async () => {
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{
+      id: 'acc', type: 'accordion', data: { segments: [{ text: 'FAQ', marks: [] }] }, props: {}, children: [
+        { id: 'body', type: 'paragraph', data: { segments: [{ text: 'Answer', marks: [] }] }, props: {}, children: [] },
+      ],
+    }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  expect(wrapper.find('.sc-accordion__title').attributes('contenteditable')).toBe('true');
+  expect(wrapper.text()).toContain('Answer'); // body visible by default
+  // collapse
+  await wrapper.find('.sc-accordion__chev').trigger('mousedown');
+  await nextTick();
+  expect(wrapper.vm.getDocument().blocks[0].props.collapsed).toBe(true);
+});
+
 test('readonly renders without contenteditable', async () => {
   const wrapper = mount(ScrambleEditor, { props: { modelValue: sampleDoc(), readonly: true } });
   await flushPromises();

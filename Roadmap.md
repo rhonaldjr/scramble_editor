@@ -252,11 +252,28 @@ Let the host app restyle the editor's own UI (toolbar, menus, gear, slide/deck
 buttons, present controls) — colors, text/label colors, borders, radius — without
 forking CSS.
 
-- [ ] Expose a documented set of CSS custom properties (design tokens) for the editor chrome: button background/hover/active, button text, accent, border, radius, popover background/foreground, etc.
-- [ ] Refactor component styles to consume those tokens (buttons, toolbar, slash/handle/color panels, gear, slides/deck + present controls) instead of hard-coded colors
-- [ ] Optional `theme` prop object (or `--sc-*` overrides) the host can pass; document precedence (host tokens > built-in light/dark)
-- [ ] Example app: a small "Brand" control that live-restyles the editor's buttons/accent to show it working
+- [x] Expose a documented set of CSS custom properties (design tokens) for the editor chrome: `--sc-btn-*`, `--sc-popover-*`, `--sc-bar-*`, `--sc-accent(-fg)`, `--sc-border`, `--sc-radius`, `--sc-danger`
+- [x] Refactor component styles to consume those tokens (expand, page style, slash, handle menu, gear, color panel, inline + selection toolbars, slides/deck + present controls) instead of hard-coded colors
+- [x] `tokens` prop (`{ accent, 'bar-bg', … }` → inline `--sc-*`); highest precedence over built-in light/dark (inline style beats the theme classes)
+- [x] Example app: a "Brand" panel (presets + accent/toolbar color pickers) that live-restyles the editor chrome
 - [ ] Verify (browser): host overrides recolor all controls in light + dark without touching content styling
+
+
+## Phase V18 — Interactive Blocks (button, accordion)
+
+Two new blocks that add lightweight interactivity to a document.
+
+- [x] `button` block: editable label, configurable colors (text + background/accent) and style (filled/outline), and a click behavior — open a hyperlink (URL, same/new tab) or emit a `button-clicked` event the host handles; ⚙ gear for label/URL/target/colors/style; exporters (HTML `<a>`/`<button>`, Markdown link)
+- [x] `accordion` block (container, collapsible): editable **title** (rich text) + editable **body** children (any blocks); expand/collapse toggle with persisted `collapsed` state; `initChildren` seeds a paragraph; exporters (HTML `<details>`/`<summary>`, Markdown)
+- [x] Register both in the slash menu; readonly renders view-only (button still navigates/emits; accordion still toggles)
+- [x] Example: a button wired to `@button-clicked` (host action) + a hyperlink button; a starter accordion
+- [ ] Verify (browser): configure a button's colors + link/action; edit and toggle an accordion; both persist + export
+
+<!-- Blocks: ButtonBlock.vue (data: { label, url, target, action, style; props:
+colors }), AccordionBlock.vue (container; data.title segments + children;
+props.collapsed). registry entries + initChildren (accordion). block-exporters
+button*/accordion*. ScrambleEditor emits button-clicked. Reuses collapse toggle
+pattern (see toggle block) + GearColor for button colors. -->
 
 
 ## Manual Test Checklist (after each phase, on Node 18+)

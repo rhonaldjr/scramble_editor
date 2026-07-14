@@ -12,6 +12,8 @@ import WebPageBlock from './WebPageBlock.vue';
 import DocumentBlock from './DocumentBlock.vue';
 import SlideBlock from './SlideBlock.vue';
 import SlidesBlock from './SlidesBlock.vue';
+import ButtonBlock from './ButtonBlock.vue';
+import AccordionBlock from './AccordionBlock.vue';
 import TableBlock from './TableBlock.vue';
 import TocBlock from './TocBlock.vue';
 import Columns from './Columns.vue';
@@ -23,6 +25,7 @@ import {
   esc, mediaMarkdown, mediaHTML, embedMarkdown, embedHTML, bookmarkMarkdown, bookmarkHTML,
   webpageMarkdown, webpageHTML, documentMarkdown, documentHTML,
   slideMarkdown, slideHTML, slidesMarkdown, slidesHTML,
+  buttonMarkdown, buttonHTML, accordionMarkdown, accordionHTML,
   tableMarkdown, tableHTML, tocMarkdown, tocHTML, pageLinkMarkdown, pageLinkHTML,
 } from '../core/block-exporters.js';
 
@@ -204,6 +207,25 @@ export function registerBuiltins() {
     type: 'page-link', label: 'Page link', icon: '📄', group: null,
     component: PageLinkBlock, create: (d = {}) => ({ docId: d.docId || '', title: d.title || '' }),
     toMarkdown: pageLinkMarkdown, toHTML: pageLinkHTML,
+  });
+
+  // Interactive blocks
+  registerBlock({
+    type: 'button', label: 'Button', icon: '🔘', group: null,
+    component: ButtonBlock,
+    create: (d = {}) => ({
+      label: d.label || 'Button', url: d.url || '', target: d.target || '_self',
+      action: d.action || 'link', variant: d.variant || 'filled',
+      textColor: d.textColor || '', bgColor: d.bgColor || '', align: d.align || 'left',
+    }),
+    toMarkdown: buttonMarkdown, toHTML: buttonHTML,
+  });
+  registerBlock({
+    type: 'accordion', label: 'Accordion', icon: '🪗', group: null, container: true,
+    component: AccordionBlock,
+    create: (d = {}) => ({ segments: d.segments ? normalizeSegments(d.segments) : [createSegment(d.title || '')] }),
+    initChildren: (make) => [make('paragraph')],
+    toMarkdown: accordionMarkdown, toHTML: accordionHTML,
   });
 
   // Presentation: a slide (container) and a slides deck (container of slides).

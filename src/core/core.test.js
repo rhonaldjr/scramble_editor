@@ -223,6 +223,33 @@ test('slides/slide exporters render backgrounds + separate slides', async () => 
   expect(toMarkdown({ blocks: [deck] }).trim()).toBe('One\n\n---\n\nTwo');
 });
 
+test('button + accordion exporters', async () => {
+  clearRegistry();
+  const { registerBuiltins } = await import('../blocks/index.js');
+  registerBuiltins();
+
+  const link = { id: 'bl', type: 'button', data: { label: 'Buy', url: 'https://x.com', target: '_blank', action: 'link', variant: 'filled', bgColor: '#e0218a', textColor: '#fff' }, props: {}, children: [] };
+  expect(toMarkdown({ blocks: [link] }).trim()).toBe('[Buy](https://x.com)');
+  const linkHTML = toHTML({ blocks: [link] });
+  expect(linkHTML).toContain('<a class="sc-button" href="https://x.com" target="_blank" rel="noopener"');
+  expect(linkHTML).toContain('background:#e0218a;color:#fff');
+  expect(linkHTML).toContain('>Buy</a>');
+
+  const evt = { id: 'be', type: 'button', data: { label: 'Run', action: 'event', variant: 'outline', bgColor: '#0f9d58' }, props: {}, children: [] };
+  expect(toMarkdown({ blocks: [evt] }).trim()).toBe('**Run**');
+  expect(toHTML({ blocks: [evt] })).toContain('<button class="sc-button sc-button--outline" type="button" style="background:transparent;border-color:#0f9d58;color:#0f9d58">Run</button>');
+
+  const acc = {
+    id: 'ac', type: 'accordion', data: { segments: [{ text: 'FAQ', marks: [] }] }, props: {}, children: [
+      { id: 'c1', type: 'paragraph', data: { segments: [{ text: 'Answer', marks: [] }] }, props: {}, children: [] },
+    ],
+  };
+  expect(toHTML({ blocks: [acc] })).toBe('<details class="sc-accordion" open><summary>FAQ</summary><p>Answer</p></details>');
+  const collapsed = { ...acc, props: { collapsed: true } };
+  expect(toHTML({ blocks: [collapsed] })).toContain('<details class="sc-accordion"><summary>');
+  expect(toMarkdown({ blocks: [acc] }).trim()).toBe('**FAQ**\n  Answer');
+});
+
 test('columns + page-link export (via registered built-ins)', async () => {
   clearRegistry();
   const { registerBuiltins } = await import('../blocks/index.js');

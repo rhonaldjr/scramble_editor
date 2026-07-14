@@ -54,8 +54,10 @@
           :theme="theme"
           :width="editorWidth"
           :fonts="fonts"
+          :tokens="brand"
           @comment-added="onCommentAdded"
           @comment-resolved="onCommentResolved"
+          @button-clicked="onButtonClicked"
           @event="onEvent"
         >
           <template #footer="{ words, chars }">
@@ -108,6 +110,15 @@
             <option value="50%">50%</option>
           </select>
         </label>
+
+        <h3>Brand (theme the UI)</h3>
+        <div class="brand-row">
+          <button v-for="p in brandPresets" :key="p.name" @click="brand = { ...p.tokens }">{{ p.name }}</button>
+        </div>
+        <label>accent <input type="color" v-model="brand['accent']" /></label>
+        <label>toolbar bg <input type="color" v-model="brand['bar-bg']" /></label>
+        <label>toolbar accent <input type="color" v-model="brand['bar-accent']" /></label>
+        <button @click="brand = {}">Reset brand</button>
 
         <h3>History (host-stored)</h3>
         <div v-if="!history.length" class="hist-empty">Edit to create versions…</div>
@@ -164,6 +175,14 @@ const readonly = ref(false);
 const focusMode = ref(false);
 const theme = ref('auto');
 const editorWidth = ref('normal'); // 'normal' | 'full' | '75%' | '50%' — programmable width
+
+// Brand: UI-theme overrides passed to :tokens (host restyles the editor chrome).
+const brand = ref({});
+const brandPresets = [
+  { name: 'Default', tokens: {} },
+  { name: 'Magenta', tokens: { accent: '#e0218a', 'bar-bg': '#2a0a24', 'bar-accent': '#ff7ac6', radius: '10px' } },
+  { name: 'Emerald', tokens: { accent: '#0f9d58', 'bar-bg': '#08261b', 'bar-accent': '#4ade80', radius: '4px' } },
+];
 const features = reactive({ slashMenu: true, shortcuts: true, toolbar: true, dragAndDrop: true });
 // Page config: gates blocks/toolbar and picks the default export format.
 const config = reactive({ output: 'markdown' });
@@ -187,6 +206,11 @@ function defaultDoc() {
       { id: 'p', type: 'paragraph', data: { segments: [{ text: 'This app owns persistence + uploads. The component only exposes the interface.', marks: [] }] }, props: {}, children: [] },
       { id: 'l', type: 'checklist', data: { segments: [{ text: 'Autosaves to localStorage', marks: [] }], checked: true }, props: {}, children: [] },
       { id: 'tip', type: 'paragraph', data: { segments: [{ text: 'Try pasting a rich web page here — headings, lists and tables keep their structure.', marks: [] }] }, props: {}, children: [] },
+      { id: 'btn-evt', type: 'button', data: { label: 'Run host action', action: 'event', variant: 'filled', bgColor: '#e0218a', textColor: '#ffffff' }, props: {}, children: [] },
+      { id: 'btn-link', type: 'button', data: { label: 'Open docs ↗', action: 'link', url: 'https://vuejs.org', target: '_blank', variant: 'outline', bgColor: '#0f9d58' }, props: {}, children: [] },
+      { id: 'acc', type: 'accordion', data: { segments: [{ text: 'What is Scramble?', marks: [] }] }, props: {}, children: [
+        { id: 'acc-b', type: 'paragraph', data: { segments: [{ text: 'A block editor delivered as one Vue 3 component. Click the chevron to collapse.', marks: [] }] }, props: {}, children: [] },
+      ] },
       { id: 'ct', type: 'contact', data: { contact: null }, props: {}, children: [] },
       { id: 'w', type: 'webpage', data: { url: 'https://example.com', width: null, height: 360 }, props: {}, children: [] },
       { id: 'deck', type: 'slides', data: {}, props: {}, children: [
@@ -425,6 +449,12 @@ function onEvent({ type, detail }) {
 }
 
 // --- imperative push demo ---
+// A `button` block with action 'event' calls this — the host decides what to do.
+function onButtonClicked(e) {
+  log(`button-clicked: ${JSON.stringify(e)}`);
+  if (e.action === 'event') window.alert(`Button "${e.label}" clicked — host handles this action.`);
+}
+
 function pushSample() {
   doc.value = {
     id: 'host-demo',
@@ -461,6 +491,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Ro
 .host__panel { border-left: 1px solid #e9e9e7; padding: 14px; overflow-y: auto; background: #fafafa; font-size: 13px; }
 .host__panel h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: #787774; margin: 16px 0 6px; }
 .host__panel label { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.brand-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
 .hist-row { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 1px 0; }
 .hist-row span { color: #787774; }
 .hist-empty { color: #9b9a97; font-style: italic; font-size: 12px; }

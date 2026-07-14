@@ -220,8 +220,9 @@ A block **type** is a Vue component **plus** a registry entry (`create`,
 > paragraph, heading 1–3, quote, bulleted/numbered/checklist, toggle, callout,
 > banner, divider, code, image/video/audio/file, embed, bookmark, **web page**,
 > **document**, table, table-of-contents, columns, page-link, **slide** /
-> **slides (presentation)** — plus your own via
-> [`registerBlock`](#building-extensions-custom-blocks).
+> **slides (presentation)**, **button** (hyperlink or host-handled action, with
+> configurable colors/style), **accordion** (collapsible, editable title + body)
+> — plus your own via [`registerBlock`](#building-extensions-custom-blocks).
 
 ### Segments & marks
 
@@ -249,6 +250,7 @@ authoring block data and exporters.
 | `theme` | String | `'auto'` (default) \| `'light'` \| `'dark'`. |
 | `width` | String\|Number | `'normal'` \| `'full'` \| `'75%'` \| `'50%'` (aliases `'three-quarter'`, `'half'`) \| a number (px) \| any CSS length. Reactive. |
 | `fonts` | Array | Custom fonts `[{ id, label, family, url? }]`. Entries with `url` inject a `<link>`; picked from the page-style (**Aa**) menu. |
+| `tokens` | Object | Host UI-theme overrides for the editor **chrome** (buttons, toolbars, menus, gear, present controls) — e.g. `{ accent: '#e0218a', 'bar-bg': '#2a0a24', radius: '10px' }`. Highest precedence (above built-in light/dark). |
 
 A `#footer` slot receives `{ words, chars }` for a word-count footer.
 
@@ -262,8 +264,9 @@ Every mutation emits a typed event **and** a catch-all `@event` with
 `block-duplicated`, `block-collapsed`, `block-link-copied`, `style-changed`,
 `slash-opened`, `slash-selected`, `shortcut-applied`, `media-uploaded`,
 `media-resized`, `media-configured`, `document-added`, `document-configured`,
-`content-loaded`, `selection-blocks`, `page-link-open`, `cursor-changed`,
-`comment-added`, `comment-resolved`, `mention-inserted`, `fullscreen-changed`.
+`content-loaded`, `button-clicked`, `selection-blocks`, `page-link-open`,
+`cursor-changed`, `comment-added`, `comment-resolved`, `mention-inserted`,
+`fullscreen-changed`.
 
 ```vue
 <ScrambleEditor
@@ -434,6 +437,32 @@ with `editor.value.enable('dragAndDrop')` / `disable(...)`.
 - **Full screen**: a built-in ⛶ button (Esc to exit), or drive it via
   `toggleFullscreen()` / the `fullscreen-changed` event; disable with
   `:features="{ fullscreen: false }"`.
+
+#### Theme the UI chrome (buttons, toolbars, menus)
+
+The editor's own controls are styled from CSS custom-property **design tokens**.
+Restyle them to your brand with the `tokens` prop (or by setting `--sc-*` on the
+element yourself) — no CSS fork. Keys accept `accent`, `bar-bg`, `sc-accent`, or
+`--sc-accent`; `tokens` win over the built-in light/dark themes.
+
+```vue
+<ScrambleEditor v-model="doc" :tokens="{
+  accent: '#e0218a',        // links, active states, primary buttons
+  'accent-fg': '#ffffff',
+  radius: '10px',           // corner radius on controls/popovers
+  'bar-bg': '#2a0a24',      // floating inline/selection toolbars (dark bars)
+  'bar-accent': '#ff7ac6',
+  'popover-bg': '#fff7fc',  // slash / handle / color / gear popovers
+}" />
+```
+
+Token groups: **`--sc-btn-*`** (bg / fg / border / hover) for controls;
+**`--sc-popover-*`** (bg / fg / muted / border / hover / shadow) for menus &
+panels; **`--sc-bar-*`** (bg / fg / hover / accent / shadow) for the floating dark
+toolbars and present controls; plus **`--sc-accent`**, **`--sc-accent-fg`**,
+**`--sc-border`**, **`--sc-radius`**, **`--sc-danger`**. Content tokens
+(`--sc-text` / `--sc-bg` / `--sc-faint` / `--sc-muted`) drive the document itself.
+The example's **Brand** panel live-restyles these.
 
 ### 6. Uploads & media
 

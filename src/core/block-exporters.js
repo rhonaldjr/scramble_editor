@@ -95,6 +95,45 @@ export function documentHTML(b) {
   return `<iframe class="sc-document__frame" src="${src}" style="width:${w};height:${h};border:0" loading="lazy"></iframe>`;
 }
 
+function buttonStyleAttr(b) {
+  const parts = [];
+  const { variant, textColor, bgColor } = b.data;
+  if (variant === 'outline') {
+    parts.push('background:transparent');
+    if (bgColor) parts.push(`border-color:${bgColor}`, `color:${bgColor}`);
+    if (textColor) parts.push(`color:${textColor}`);
+  } else {
+    if (bgColor) parts.push(`background:${bgColor}`);
+    if (textColor) parts.push(`color:${textColor}`);
+  }
+  return parts.join(';');
+}
+export function buttonMarkdown(b) {
+  const label = b.data.label || 'Button';
+  return b.data.action === 'link' && b.data.url ? `[${label}](${b.data.url})` : `**${label}**`;
+}
+export function buttonHTML(b) {
+  const label = esc(b.data.label || 'Button');
+  const cls = `sc-button${b.data.variant === 'outline' ? ' sc-button--outline' : ''}`;
+  const style = buttonStyleAttr(b);
+  const styleAttr = style ? ` style="${style}"` : '';
+  if (b.data.action === 'link' && b.data.url) {
+    const tgt = b.data.target === '_blank' ? ' target="_blank" rel="noopener"' : '';
+    return `<a class="${cls}" href="${escAttr(b.data.url)}"${tgt}${styleAttr}>${label}</a>`;
+  }
+  return `<button class="${cls}" type="button"${styleAttr}>${label}</button>`;
+}
+
+export function accordionMarkdown(b, h) {
+  const line = `**${h.renderSegments(b.data.segments)}**`;
+  const kids = h.renderChildren(b);
+  return kids ? `${line}\n${kids}` : line;
+}
+export function accordionHTML(b, h) {
+  const open = b.props && b.props.collapsed ? '' : ' open';
+  return `<details class="sc-accordion"${open}><summary>${h.renderSegments(b.data.segments)}</summary>${h.renderChildrenRaw(b)}</details>`;
+}
+
 export function bookmarkMarkdown(b) {
   if (!b.data.url) return '';
   return `[${(b.data.meta && b.data.meta.title) || b.data.url}](${b.data.url})`;

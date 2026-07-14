@@ -77,6 +77,7 @@ const props = defineProps({
   theme: { type: String, default: 'auto' },         // 'auto' | 'light' | 'dark'
   width: { type: [String, Number], default: 'normal' }, // 'normal' | 'full' | 'half' | number(px) | CSS length
   fonts: { type: Array, default: () => [] },        // custom fonts: [{ id, label, family, url? }]
+  tokens: { type: Object, default: () => ({}) },    // UI theme overrides, e.g. { accent: '#e0218a', 'bar-bg': '#2a0a2a' }
 });
 const emit = defineEmits([
   'update:modelValue', 'ready', 'change', 'event',
@@ -84,7 +85,7 @@ const emit = defineEmits([
   'block-duplicated', 'block-link-copied', 'style-changed', 'block-collapsed',
   'slash-opened', 'slash-selected', 'shortcut-applied',
   'media-uploaded', 'media-resized', 'media-configured',
-  'document-added', 'document-configured', 'content-loaded',
+  'document-added', 'document-configured', 'content-loaded', 'button-clicked',
   'selection-blocks', 'page-link-open', 'cursor-changed',
   'comment-added', 'comment-resolved', 'mention-inserted', 'word-count', 'fullscreen-changed',
 ]);
@@ -166,6 +167,16 @@ const rootStyle = computed(() => {
   const fontId = (doc.style && doc.style.font) || 'default';
   const custom = (props.fonts || []).find((f) => (f.id || f.value) === fontId);
   if (custom && custom.family) s.fontFamily = custom.family;
+  // Host UI-theme overrides as inline CSS custom properties (highest precedence,
+  // above the built-in light/dark tokens). Keys accept 'accent', 'bar-bg',
+  // 'sc-accent', or '--sc-accent'.
+  const t = props.tokens || {};
+  for (const key of Object.keys(t)) {
+    const v = t[key];
+    if (v == null || v === '') continue;
+    const name = key.startsWith('--') ? key : `--${key.startsWith('sc-') ? '' : 'sc-'}${key}`;
+    s[name] = String(v);
+  }
   return s;
 });
 
