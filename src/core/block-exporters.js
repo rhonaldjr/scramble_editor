@@ -3,6 +3,7 @@
 // registry; Vue components handle only rendering/editing.
 
 import { segmentsToMarkdown, segmentsToHTML, segmentsText } from './segments.js';
+import { normalizeTable, cellSegments } from './table.js';
 import { flattenBlocks } from './model.js';
 import { headingLevel } from './collapse.js';
 import { youtubeId } from './embed.js';
@@ -154,17 +155,30 @@ export function bookmarkHTML(b) {
 }
 
 export function tableMarkdown(b) {
-  const rows = b.data.rows || [];
+  const rows = normalizeTable(b.data.rows || []);
   if (!rows.length) return '';
-  const line = (row) => `| ${row.map((c) => segmentsToMarkdown(c)).join(' | ')} |`;
+  // Markdown tables can't express merges — covered cells export as blank so the
+  // column count stays consistent.
+  const line = (row) => `| ${row.map((c) => (c.covered ? '' : segmentsToMarkdown(cellSegments(c)))).join(' | ')} |`;
   const sep = `| ${rows[0].map(() => '---').join(' | ')} |`;
   return [line(rows[0]), sep, ...rows.slice(1).map(line)].join('\n');
 }
 export function tableHTML(b) {
-  const rows = b.data.rows || [];
-  const tag = (r) => (r === 0 ? 'th' : 'td');
-  const body = rows.map((row, r) => `<tr>${row.map((c) => `<${tag(r)}>${segmentsToHTML(c)}</${tag(r)}>`).join('')}</tr>`).join('');
-  return `<table class="sc-table">${body}</table>`;
+  const rows = normalizeTable(b.data.rows || []);
+  const widths = b.data.colWidths || [];
+  const colgroup = widths.some(Boolean) && rows[0]
+    ? `<colgroup>${rows[0].map((_, i) => `<col${widths[i] ? ` style="width:${Number(widths[i])}px"` : ''}>`).join('')}</colgroup>`
+    : '';
+  const body = rows.map((row, r) => {
+    const cells = row.filter((c) => !c.covered).map((c) => {
+      const tag = r === 0 ? 'th' : 'td';
+      const cs = (c.colSpan || 1) > 1 ? ` colspan="${c.colSpan}"` : '';
+      const rs = (c.rowSpan || 1) > 1 ? ` rowspan="${c.rowSpan}"` : '';
+      return `<${tag}${cs}${rs}>${segmentsToHTML(cellSegments(c))}</${tag}>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+  return `<table class="sc-table">${colgroup}${body}</table>`;
 }
 
 function tocHeadings(doc) {

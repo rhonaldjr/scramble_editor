@@ -200,7 +200,7 @@ function blockText(b) {
   if (!b.data) return '';
   if (b.data.segments) return segmentsText(b.data.segments);
   if (typeof b.data.code === 'string') return b.data.code;
-  if (b.data.rows) return b.data.rows.flat().map((c) => segmentsText(c)).join(' ');
+  if (b.data.rows) return b.data.rows.flat().map((c) => segmentsText(Array.isArray(c) ? c : (c && c.segments) || [])).join(' ');
   return '';
 }
 const wordCount = computed(() => {
@@ -543,38 +543,6 @@ function selectionTargets() {
   return g ? turnIntoTargets(blocks[0].type).filter((d) => d.group === g) : [];
 }
 
-/** Wrap a dropped block beside a target into a columns layout. side='left'|'right'. */
-function createColumns(draggedId, targetId, side) {
-  const dLoc = model.findBlock(doc.blocks, draggedId);
-  if (!dLoc || draggedId === targetId) return false;
-  if (model.findBlock(dLoc.block.children || [], targetId)) return false;
-  const draggedBlock = model.removeBlock(doc.blocks, draggedId);
-  const newCol = createBlock('column');
-  newCol.children = [draggedBlock];
-
-  const parent = model.findBlock(doc.blocks, targetId).parent;
-  if (parent && parent.type === 'column') {
-    const colLoc = model.findBlock(doc.blocks, parent.id);
-    const columnsBlock = colLoc && colLoc.parent;
-    if (columnsBlock && columnsBlock.type === 'columns') {
-      const idx = columnsBlock.children.indexOf(parent);
-      columnsBlock.children.splice(side === 'left' ? idx : idx + 1, 0, newCol);
-      emitEvent('block:moved', { id: draggedId, targetId, position: side });
-      markChanged();
-      return true;
-    }
-  }
-  const loc = model.findBlock(doc.blocks, targetId);
-  const targetCol = createBlock('column');
-  targetCol.children = [model.removeBlock(doc.blocks, targetId)];
-  const columnsBlock = createBlock('columns');
-  columnsBlock.children = side === 'left' ? [newCol, targetCol] : [targetCol, newCol];
-  loc.siblings.splice(loc.index, 0, columnsBlock);
-  emitEvent('block:moved', { id: draggedId, targetId, position: side });
-  markChanged();
-  return true;
-}
-
 // --- collapse (Phase V6) ---
 function toggleCollapsed(id) {
   const loc = model.findBlock(doc.blocks, id);
@@ -766,7 +734,7 @@ const ctx = {
   // V9
   selection, isSelected, setSelection, clearSelection, toggleSelect, selectRange,
   deleteSelected, turnIntoSelected, colorSelected, moveSelectedAfter, selectionTargets,
-  selectableOrder, createColumns,
+  selectableOrder,
   // V10
   presenceFor,
   // V11
@@ -785,12 +753,15 @@ watch(
     if (val) setDocument(val);
   },
 );
+function migrateCols() { model.flattenColumns(doc.blocks); } // legacy `columns` → normal flow
+
 function setDocument(val) {
   const next = clone(val);
   doc.id = next.id;
   doc.title = next.title;
   doc.style = next.style || doc.style;
   doc.blocks = next.blocks || [];
+  migrateCols(); // flatten any legacy columns in a loaded document
 }
 
 // Parse content of a given format into block descriptors / blocks.
@@ -887,6 +858,7 @@ function onGlobalKey(e) {
 }
 
 onMounted(() => {
+  migrateCols(); // flatten any legacy columns in the initial document
   document.addEventListener('selectionchange', onCursorMove);
   document.addEventListener('keydown', onGlobalKey);
   emitEvent('editor:ready', { docId: doc.id });

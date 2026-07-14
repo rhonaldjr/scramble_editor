@@ -292,6 +292,24 @@ Gears (Media/Document/Button) get Align + Wrap. AccordionBlock = group of
 accordion-item blocks (slashHidden) with "+ Add accordion item". -->
 
 
+## Phase V20 — Table Upgrades, Columns Removed
+
+Replace the `columns` layout block with a richer table.
+
+- [x] Remove the `columns` / `column` blocks (registration, components, `createColumns`, side-drop). Legacy docs auto-migrate: `model.flattenColumns` inlines each column's children into normal flow on load
+- [x] Table cell model → objects `{ segments, colSpan?, rowSpan?, covered? }` (`core/table.js`); legacy segment-array cells auto-upgrade; exporters emit `colspan`/`rowspan` and skip covered cells
+- [x] Column width resize: drag the boundary handles (control row) → `data.colWidths` (px); `<colgroup>` + `table-layout: fixed`; exported as a `<colgroup>`
+- [x] Merge / split cells: **Merge right**, **Merge down**, **Split** act on the focused cell; `mergeCells`/`splitCell`/`sanitizeSpans` keep the grid valid on all row/column edits
+- [ ] Verify (browser): resize columns, merge a 2×2 region, split it, add/remove rows near a merge, export HTML
+
+<!-- Core: src/core/table.js (normalizeTable/cellSegments/emptyCell,
+sanitizeSpans, mergeCells, splitCell, add/deleteRow/Column). TableBlock.vue:
+colgroup + resize handles + merge/split controls + active-cell tracking.
+TableCell.vue: object cells + colspan/rowspan. block-exporters tableHTML/Markdown
+updated. model.flattenColumns migration (was normalizeColumns). Columns.vue/
+Column.vue deleted. -->
+
+
 ## Manual Test Checklist (after each phase, on Node 18+)
 
 1. `npm install` then `npm run dev` starts with no console errors

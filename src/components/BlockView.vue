@@ -1,12 +1,11 @@
 <template>
   <div
     class="sc-block"
-    :class="[alignClass, wrapClass, { 'sc-selected': selected, 'sc-edge-left': edge === 'left', 'sc-edge-right': edge === 'right', 'sc-remote': remote.length, 'sc-dim': dimmed }]"
+    :class="[alignClass, wrapClass, { 'sc-selected': selected, 'sc-remote': remote.length, 'sc-dim': dimmed }]"
     :style="remote.length ? { '--sc-remote-color': remote[0].color } : {}"
     :data-block-id="block.id"
     :data-type="block.type"
     @dragover="onDragOver"
-    @dragleave="edge = null"
     @drop="onDrop"
   >
     <div class="sc-block__row" :style="rowStyle">
@@ -43,9 +42,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { getBlock } from '../core/registry.js';
-import { findBlock } from '../core/model.js';
 import { TEXT_COLORS, BG_COLORS } from '../core/colors.js';
 import { headingLevel, visibleAfterCollapse } from '../core/collapse.js';
 import { useEditor } from '../composables/editor.js';
@@ -55,7 +53,6 @@ const ctx = useEditor();
 const readonly = computed(() => ctx.readonly.value);
 const def = computed(() => getBlock(props.block.type) || {});
 const selected = computed(() => ctx.isSelected(props.block.id));
-const edge = ref(null); // 'left' | 'right' during a side-drop
 const remote = computed(() => (ctx.presenceFor ? ctx.presenceFor(props.block.id) : [])); // remote editors here
 const comments = computed(() => (ctx.commentsFor ? ctx.commentsFor(props.block.id) : []));
 const dimmed = computed(() =>
@@ -118,46 +115,17 @@ function onDragStart(e) {
 function onDragEnd() {
   ctx.drag.id = null;
 }
-// Columns are only offered when the gesture is deliberate: never for list items
-// (they reorder vertically), never onto a container, and only in a narrow band
-// at the far left/right edge.
-function draggedDef() {
-  if (!ctx.drag.id) return null;
-  const loc = findBlock(ctx.doc.blocks, ctx.drag.id);
-  return loc ? getBlock(loc.block.type) : null;
-}
-function canMakeColumns() {
-  const dd = draggedDef();
-  if (def.value.listMarker || (dd && dd.listMarker)) return false; // list reorder stays vertical
-  if (def.value.container) return false; // don't drop columns onto columns/column
-  return true;
-}
-function sideOf(e, rect) {
-  if (!canMakeColumns()) return null;
-  const x = e.clientX - rect.left;
-  const zone = Math.min(rect.width * 0.15, 56); // narrow edge band
-  if (x < zone) return 'left';
-  if (x > rect.width - zone) return 'right';
-  return null;
-}
 function onDragOver(e) {
   if (!ctx.drag.id || ctx.drag.id === props.block.id) return;
   e.preventDefault();
-  edge.value = sideOf(e, e.currentTarget.getBoundingClientRect());
 }
 function onDrop(e) {
   if (!ctx.drag.id || ctx.drag.id === props.block.id) return;
   e.preventDefault();
   e.stopPropagation();
   const rect = e.currentTarget.getBoundingClientRect();
-  const side = sideOf(e, rect);
-  if (side) {
-    ctx.createColumns(ctx.drag.id, props.block.id, side); // drop on the side → columns
-  } else {
-    const after = e.clientY > rect.top + rect.height / 2;
-    ctx.moveBlock(ctx.drag.id, props.block.id, after ? 'after' : 'before');
-  }
-  edge.value = null;
+  const after = e.clientY > rect.top + rect.height / 2;
+  ctx.moveBlock(ctx.drag.id, props.block.id, after ? 'after' : 'before');
   ctx.drag.id = null;
 }
 </script>

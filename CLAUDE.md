@@ -96,14 +96,16 @@ examples/                   # host apps consuming the component (Gallery + Minim
     segments: [ { text, marks: ['bold'], link?, mention? } ]
   },
   props: { color, background, collapsed },
-  children: []                  // nested blocks (toggle, columns, lists, callout)
+  children: []                  // nested blocks (toggle, lists, callout, accordion)
 }
 ```
 
-Special blocks: `columns` (children are `column` blocks), `slides` (a deck whose
+Special blocks: `slides` (a deck whose
 children are `slide` container blocks — background via `props.backgroundColor` /
 `props.backgroundImage`, Present mode overlay), `table`
-(`data.rows` = 2D cell-segment arrays), `toc` (renders from headings),
+(`data.rows` = 2D grid of cell objects `{ segments, colSpan?, rowSpan?, covered? }`
+via `core/table.js`; `data.colWidths` = per-column px; resize + merge/split;
+legacy segment-array cells auto-upgrade), `toc` (renders from headings),
 `page-link` (`data.docId`), media/embed (`data.url` + host-provided metadata),
 `webpage` (`data.url` + `width`/`height` — live iframe preview), `document`
 (`data.url`/`name`/`docType`/`width`/`height` — pdf/office/odf viewer resolved

@@ -72,7 +72,7 @@ listen to typed events, and wire your **own backend** through adapter functions.
   ` ``` `, `---`, …), and a selection toolbar.
 - Turn Into (convert between compatible blocks), a block handle menu
   (duplicate / delete / move / color / copy link / comment), drag-to-reorder,
-  and side-drop to create columns.
+  and drag-to-reorder.
 - Enter/Backspace/Tab semantics that match Notion (split, merge, indent;
   Backspace in an empty nested block outdents toward its parent first).
 - Multi-block selection (rubber-band / keyboard / cmd-click) with group move,
@@ -87,12 +87,13 @@ listen to typed events, and wire your **own backend** through adapter functions.
 - **Document** block — upload or link a PDF / Word / PowerPoint / Excel / ODF
   file; type is auto-detected and previewed inline (native PDF, or a
   host-resolved viewer / client-rendered HTML), resizable.
-- Table (add/remove rows & columns, cell editing) and an auto Table of Contents.
+- Table (add/remove rows & columns, cell editing, **drag-resize column widths**,
+  and **merge / split cells**) and an auto Table of Contents.
 
 **Structure & layout**
 
-- Nested blocks (toggle, lists, callout, columns), collapsible headings,
-  columns / column layout, and page-link blocks.
+- Nested blocks (toggle, lists, callout, accordion), collapsible headings, and
+  page-link blocks. (For side-by-side layout, use a **table**.)
 - Programmable editor width (`normal` / `full` / `75%` / `50%` / px / CSS),
   full-screen expand, focus mode, small-text and custom-font page styles,
   light/dark/auto theme.
@@ -205,7 +206,7 @@ host persists it however it likes.
     segments: [{ text: 'Hello ', marks: [] }, { text: 'world', marks: ['bold'] }],
   },
   props: { color, background, collapsed },  // optional
-  children: [],                 // nested blocks (toggle, columns, lists, callout)
+  children: [],                 // nested blocks (toggle, lists, callout, accordion)
 }
 ```
 
@@ -219,7 +220,7 @@ A block **type** is a Vue component **plus** a registry entry (`create`,
 
 > paragraph, heading 1–3, quote, bulleted/numbered/checklist, toggle, callout,
 > banner, divider, code, image/video/audio/file, embed, bookmark, **web page**,
-> **document**, table, table-of-contents, columns, page-link, **slide** /
+> **document**, table (resizable columns + merge/split cells), table-of-contents, page-link, **slide** /
 > **slides (presentation)**, **button** (hyperlink or host-handled action, with
 > configurable colors/style), **accordion** (a group of collapsible items — add
 > more with "+ Add accordion item") — plus your own via

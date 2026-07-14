@@ -223,17 +223,54 @@ test('slides/slide exporters render backgrounds + separate slides', async () => 
   expect(toMarkdown({ blocks: [deck] }).trim()).toBe('One\n\n---\n\nTwo');
 });
 
-test('columns initChildren seeds two columns, each with a paragraph', async () => {
-  clearRegistry();
-  const { registerBuiltins } = await import('../blocks/index.js');
-  registerBuiltins();
-  const { getBlock } = await import('./registry.js');
-  const make = (type) => ({ type, children: [] });
-  const kids = getBlock('columns').initChildren(make);
-  expect(kids.map((c) => c.type)).toEqual(['column', 'column']);
-  expect(kids[0].children.map((c) => c.type)).toEqual(['paragraph']);
-  // bare `column` is hidden from the slash menu (created via Columns / side-drop)
-  expect(getBlock('column').slashHidden).toBe(true);
+test('flattenColumns migrates legacy columns into normal flow', async () => {
+  const { flattenColumns } = await import('./model.js');
+  const p = (id, t) => ({ id, type: 'paragraph', data: { segments: [{ text: t, marks: [] }] }, props: {}, children: [] });
+  const blocks = [
+    { id: 'h', type: 'heading-1', data: { segments: [{ text: 'Title', marks: [] }] }, props: {}, children: [] },
+    { id: 'cols', type: 'columns', data: {}, props: {}, children: [
+      { id: 'cA', type: 'column', data: {}, props: {}, children: [p('a', 'one'), p('b', 'two')] },
+      { id: 'cB', type: 'column', data: {}, props: {}, children: [p('c', 'three')] },
+    ] },
+  ];
+  flattenColumns(blocks);
+  expect(blocks.map((b) => b.type)).toEqual(['heading-1', 'paragraph', 'paragraph', 'paragraph']);
+  expect(blocks.map((b) => b.id)).toEqual(['h', 'a', 'b', 'c']);
+});
+
+test('table ops: merge right/down, split, and span sanitation', async () => {
+  const { normalizeTable, mergeCells, splitCell, sanitizeSpans } = await import('./table.js');
+  const grid = () => normalizeTable([
+    [[{ text: 'a', marks: [] }], [{ text: 'b', marks: [] }], [{ text: 'c', marks: [] }]],
+    [[{ text: 'd', marks: [] }], [{ text: 'e', marks: [] }], [{ text: 'f', marks: [] }]],
+  ]);
+
+  // merge right: (0,0) absorbs (0,1) → colSpan 2, (0,1) covered
+  let rows = grid();
+  expect(mergeCells(rows, 0, 0, 'right')).toBe(true);
+  expect(rows[0][0].colSpan).toBe(2);
+  expect(rows[0][1].covered).toBe(true);
+
+  // merge down on the 2-wide anchor → rowSpan 2, covers the cells below it
+  expect(mergeCells(rows, 0, 0, 'down')).toBe(true);
+  expect(rows[0][0].rowSpan).toBe(2);
+  expect(rows[1][0].covered).toBe(true);
+  expect(rows[1][1].covered).toBe(true);
+
+  // split restores single cells
+  expect(splitCell(rows, 0, 0)).toBe(true);
+  expect(rows[0][0].colSpan).toBeUndefined();
+  expect(rows.flat().some((c) => c.covered)).toBe(false);
+
+  // merge at the right edge fails
+  rows = grid();
+  expect(mergeCells(rows, 0, 2, 'right')).toBe(false);
+
+  // sanitizeSpans clamps an over-large span to the grid
+  rows = grid();
+  rows[0][2].colSpan = 5;
+  sanitizeSpans(rows);
+  expect(rows[0][2].colSpan).toBeUndefined(); // clamped to 1 (only 1 column left)
 });
 
 test('button + accordion exporters', async () => {
@@ -262,22 +299,23 @@ test('button + accordion exporters', async () => {
   expect(toMarkdown({ blocks: [acc] }).trim()).toBe('**FAQ**\n  Answer\n\n**More**\n  Second');
 });
 
-test('columns + page-link export (via registered built-ins)', async () => {
+test('page-link + merged-table export (via registered built-ins)', async () => {
   clearRegistry();
   const { registerBuiltins } = await import('../blocks/index.js');
   registerBuiltins();
-  const p = (id, t) => ({ id, type: 'paragraph', data: { segments: [{ text: t, marks: [] }] }, props: {}, children: [] });
-  const cols = {
-    id: 'cols', type: 'columns', data: {}, props: {},
-    children: [
-      { id: 'cA', type: 'column', data: {}, props: {}, children: [p('l', 'left one'), p('l2', 'left two')] },
-      { id: 'cB', type: 'column', data: {}, props: {}, children: [p('r', 'right one')] },
-    ],
-  };
-  expect(toMarkdown({ blocks: [cols] })).toBe('left one\n\nleft two\n\nright one\n');
-  expect(toHTML({ blocks: [cols] })).toBe(
-    '<div class="sc-columns"><div class="sc-column"><p>left one</p><p>left two</p></div><div class="sc-column"><p>right one</p></div></div>',
-  );
+  const { normalizeTable, mergeCells } = await import('./table.js');
+
+  // a table with a merged top-left cell + a column width
+  const rows = normalizeTable([
+    [[{ text: 'A', marks: [] }], [{ text: 'B', marks: [] }]],
+    [[{ text: '1', marks: [] }], [{ text: '2', marks: [] }]],
+  ]);
+  mergeCells(rows, 0, 0, 'right'); // A spans 2 cols; B covered
+  const tbl = { id: 't', type: 'table', data: { rows, colWidths: [120, null] }, props: {}, children: [] };
+  const html = toHTML({ blocks: [tbl] });
+  expect(html).toContain('<colgroup><col style="width:120px"><col></colgroup>');
+  expect(html).toContain('<th colspan="2">A</th>'); // B is covered → omitted
+  expect(toMarkdown({ blocks: [tbl] }).trim()).toBe('| A |  |\n| --- | --- |\n| 1 | 2 |');
 
   const link = { id: 'pl', type: 'page-link', data: { docId: 'doc-9', title: 'Roadmap' }, props: {}, children: [] };
   expect(toMarkdown({ blocks: [link] })).toBe('[Roadmap](?doc=doc-9)\n');

@@ -17,11 +17,10 @@ import AccordionBlock from './AccordionBlock.vue';
 import AccordionItemBlock from './AccordionItemBlock.vue';
 import TableBlock from './TableBlock.vue';
 import TocBlock from './TocBlock.vue';
-import Columns from './Columns.vue';
-import Column from './Column.vue';
 import PageLinkBlock from './PageLinkBlock.vue';
 import { registerBlock, hasBlock } from '../core/registry.js';
 import { createSegment, normalizeSegments } from '../core/segments.js';
+import { normalizeTable, emptyCell } from '../core/table.js';
 import {
   esc, mediaMarkdown, mediaHTML, embedMarkdown, embedHTML, bookmarkMarkdown, bookmarkHTML,
   webpageMarkdown, webpageHTML, documentMarkdown, documentHTML,
@@ -180,7 +179,8 @@ export function registerBuiltins() {
     type: 'table', label: 'Table', icon: '▦', group: null,
     component: TableBlock,
     create: (d = {}) => ({
-      rows: d.rows && d.rows.length ? d.rows : [[[{ text: '', marks: [] }], [{ text: '', marks: [] }]], [[{ text: '', marks: [] }], [{ text: '', marks: [] }]]],
+      rows: normalizeTable(d.rows && d.rows.length ? d.rows : [[emptyCell(), emptyCell()], [emptyCell(), emptyCell()]]),
+      colWidths: d.colWidths || [],
     }),
     toMarkdown: tableMarkdown, toHTML: tableHTML,
   });
@@ -191,24 +191,8 @@ export function registerBuiltins() {
     toHTML: (_b, h) => tocHTML(h.doc),
   });
 
-  // Layout: columns + column (container blocks render their own children)
-  registerBlock({
-    type: 'column', label: 'Column', icon: '▯', group: null, container: true, slashHidden: true,
-    component: Column, create: () => ({}),
-    initChildren: (make) => [make('paragraph')],
-    toMarkdown: (b, h) => h.renderChildrenRaw(b),
-    toHTML: (b, h) => `<div class="sc-column">${h.renderChildrenRaw(b)}</div>`,
-  });
-  registerBlock({
-    type: 'columns', label: 'Columns', icon: '▥', group: null, container: true,
-    component: Columns, create: () => ({}),
-    initChildren: (make) => {
-      const col = () => { const c = make('column'); c.children = [make('paragraph')]; return c; };
-      return [col(), col()];
-    },
-    toMarkdown: (b, h) => (b.children || []).map((c) => h.renderChildrenRaw(c)).filter(Boolean).join('\n\n'),
-    toHTML: (b, h) => `<div class="sc-columns">${h.renderChildrenRaw(b)}</div>`,
-  });
+  // (Columns removed — use a Table for side-by-side layout. Old docs with
+  //  `columns` blocks are flattened on load; see model.flattenColumns.)
   registerBlock({
     type: 'page-link', label: 'Page link', icon: '📄', group: null,
     component: PageLinkBlock, create: (d = {}) => ({ docId: d.docId || '', title: d.title || '' }),

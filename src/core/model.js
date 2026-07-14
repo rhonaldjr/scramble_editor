@@ -47,6 +47,21 @@ export function removeBlock(blocks, id) {
   return removed;
 }
 
+// Migration: the `columns` block was removed (use a Table instead). Flatten any
+// legacy `columns` block in a loaded document into normal flow — each column's
+// children are inlined in order (stray non-column children kept as-is).
+export function flattenColumns(blocks) {
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const b = blocks[i];
+    if (b.children && b.children.length) flattenColumns(b.children);
+    if (b.type === 'columns') {
+      const inner = (b.children || []).flatMap((col) => (col.type === 'column' ? col.children || [] : [col]));
+      blocks.splice(i, 1, ...inner);
+    }
+  }
+  return blocks;
+}
+
 function containsBlock(block, id) {
   for (const child of block.children || []) {
     if (child.id === id || containsBlock(child, id)) return true;

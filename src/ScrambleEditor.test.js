@@ -388,7 +388,7 @@ test('accordion "+ Add accordion item" appends a new item', async () => {
   expect(items[1].children[0].type).toBe('paragraph');
 });
 
-test('columns render their column children (content is visible)', async () => {
+test('legacy columns document is flattened on load (columns removed)', async () => {
   const doc = {
     id: 'd', title: 't', style: {},
     blocks: [{
@@ -400,9 +400,30 @@ test('columns render their column children (content is visible)', async () => {
   };
   const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
   await flushPromises();
-  expect(wrapper.findAll('.sc-column').length).toBe(2);
+  const types = wrapper.vm.getDocument().blocks.map((b) => b.type);
+  expect(types).toEqual(['paragraph', 'paragraph']); // columns/column gone
   expect(wrapper.text()).toContain('Left col');
   expect(wrapper.text()).toContain('Right col');
+});
+
+test('table: merge two header cells via the controls (colspan)', async () => {
+  const cell = (t) => [{ text: t, marks: [] }];
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{ id: 'tbl', type: 'table', data: { rows: [[cell('A'), cell('B')], [cell('1'), cell('2')]] }, props: {}, children: [] }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  // focus the first header cell, then Merge right
+  await wrapper.findAll('.sc-table__cell')[0].trigger('focus');
+  await nextTick();
+  const mergeBtn = wrapper.findAll('.sc-table__op').find((b) => b.text().includes('Merge right'));
+  await mergeBtn.trigger('mousedown');
+  await nextTick();
+  const rows = wrapper.vm.getDocument().blocks[0].data.rows;
+  expect(rows[0][0].colSpan).toBe(2);
+  expect(rows[0][1].covered).toBe(true);
+  expect(wrapper.vm.getHTML()).toContain('<th colspan="2">A</th>');
 });
 
 test('block alignment (props.align) applies a content-aware class', async () => {
