@@ -1,162 +1,185 @@
 # Roadmap
 
-Byte-size implementation plan. Each phase is independently runnable and verifiable. Complete a phase, run the checklist, commit, then start the next. Do not mix phases.
+Scramble is an **exclusive Vue 3 component** (Vite). It ships **no backend** —
+the host application wires persistence, uploads, contacts, embeds, collaboration,
+comments, and history through `adapters` props and events the component exposes
+(see `examples/`). This roadmap tracks feature parity with the earlier reference
+implementation, rebuilt strictly as Vue.
 
-## Phase 0: Scaffold
+Legend: `[x]` done · `[ ]` not yet. "Done" means implemented in the Vue codebase;
+items still need a real-browser pass on Node 18+ (this repo was scaffolded on a
+Node 12 host without a browser — only `src/core/*` is machine-verified via Vitest).
 
-- [x] `npm init`, `"type": "module"`, add `express` and `ws`
-- [x] `server/index.js`: Express serving `public/`, port 3000 (or `PORT`)
-- [x] `public/index.html`: editor mount point, script tags
-- [x] npm scripts: `dev` (node --watch), `start`, `test`
-- [x] Verify: server starts, page loads
+## Phase V0 — Scaffold & Core (framework-free logic)
 
-## Phase 1: Block Engine (read-only)
+- [x] Vite + Vue 3 project, library build (`src/index.js`), demo (`src/demo`)
+- [x] `src/core/segments.js`: segments + marks — split, slice, toggle, link, HTML/Markdown (Vitest)
+- [x] `src/core/model.js`: tree ops — find, insert, remove, move, indent/outdent, merge (Vitest)
+- [x] `src/core/registry.js` + `src/core/exporter.js`: registry + Markdown/HTML export (Vitest)
+- [x] `useEditor()` context (provide/inject); `useEditableText` contenteditable ⟷ segments bridge
 
-- [x] `core.js`: registry (`registerBlock`, `getBlock`, `listBlocks`), segment/mark render helper
-- [x] Blocks: paragraph, heading (h1-h3), bulleted-list, numbered-list, checklist, quote, divider
-- [x] Render a hardcoded document tree (including nested children) in view mode
-- [ ] Verify: sample document renders, nesting works  <!-- needs a real-browser click-through -->
+## Phase V1 — Text Engine & Editing
 
-<!-- registry + segment helpers split into registry.js and segments.js; DOM in
-render.js. Covered by test/registry, test/segments, test/blocks. -->
+- [x] Blocks: paragraph, heading 1–3, quote, bulleted/numbered/checklist, divider
+- [x] contenteditable editing synced to segments (reactive, caret-preserving)
+- [x] Enter splits, Backspace-at-start merges, Tab/Shift+Tab indent, Arrow moves focus
+- [x] Drag handle to reorder blocks
+- [ ] Verify in a browser: type a full document, nesting + reorder work
 
-## Phase 2: Live Editing
+## Phase V2 — Slash Menu, Markdown Shortcuts, Inline Toolbar
 
-- [x] contenteditable editing for text blocks, synced to segments
-- [x] Enter splits, Backspace at start merges, ArrowUp/Down move focus, Tab/Shift+Tab nest and un-nest
-- [x] Drag handle to reorder with drop guides
-- [x] Client event bus: `block:created/updated/deleted/moved`, `selection:changed`
-- [ ] Verify: type a full document, events log to console  <!-- needs a real-browser click-through -->
+- [x] `/` opens a filterable block picker at the caret; selecting inserts/converts
+- [x] Markdown shortcuts (`# `, `- `, `1. `, `[] `, `> `, ```` ``` ````, `---`, …)
+- [x] Inline toolbar on selection: bold, italic, underline, strikethrough, code, link (marks)
+- [ ] Verify in a browser: insert every block via slash + shortcuts, apply all marks
 
-## Phase 3: Slash Menu, Markdown Shortcuts, Toolbar
+## Phase V3 — Persistence & Events Interface + Example Client
 
-- [x] `/` opens filterable block picker at caret; selecting inserts
-- [x] Markdown shortcuts: `# `, `## `, `### `, `- `, `1. `, `[] `, `> `, ```` ``` ````, `---` (emit `shortcut:applied`)
-- [x] Inline toolbar on selection: bold, italic, underline, strikethrough, inline code, link (stored as marks)
-- [ ] Verify: insert every block via slash and shortcuts, apply all marks  <!-- needs a real-browser click-through -->
+The component owns none of this — it exposes `v-model`, `@change`, typed events,
+and adapter props. The host implements the behavior.
 
-<!-- Caret/selection helpers extracted to caret.js; block create/convert to
-block-ops.js. Pure mark-range ops (toggle/link) in segments.js, covered by
-test/marks. The ``` shortcut maps to `code`, which registers in Phase 7. -->
+- [x] `v-model` (push/pull the document); `@change`; typed events + catch-all `@event`
+- [x] `adapters` prop (`upload`, `fetchContacts`, `fetchEmbedMeta`) with graceful fallback
+- [x] Imperative API via template ref: `getDocument/setDocument/getMarkdown/getHTML/enable/disable/setReadonly/focus`
+- [ ] Example client (`examples/`) implementing localStorage persistence + autosave + event log + mock upload
+- [ ] Verify: edits persist across reload in the example (host-side)
 
+## Phase V4 — Turn Into, Handle Menu, Colors
 
-## Phase 4: Turn Into and Handle Menu
+- [x] Turn Into: convert within a `group`, mapping segments + children (`block-converted`)
+- [x] Block handle menu: Turn Into, Duplicate, Delete, Move up/down, Copy link, Text/Bg color
+- [x] `props.color` / `props.background` applied in render
+- [ ] Verify (browser): paragraph → heading → checklist round-trip; colors persist  <!-- core logic (turn-into/clone/colors) Vitest-verified; toggle joins the round-trip in V6 -->
 
-- [x] `turnIntoGroup` on registry entries; conversion maps segments and children; emit `block:converted`
-- [x] Handle menu on drag handle click: Turn Into submenu, Duplicate, Delete, Move up/down, Copy block link, Text color, Background color (`props.color`, `props.background`)
-- [x] Emit `block:duplicated`
-- [ ] Verify: paragraph -> heading -> toggle -> checklist round trip, colors persist  <!-- needs a real-browser click-through; toggle joins the text group in Phase 7 -->
-
-<!-- Turn Into mapping in turn-into.js (pure, test/turn-into); moveUp/moveDown in
-model.js and duplicate/cloneWithIds in block-ops.js (test/blockops). Color
-tokens in colors.js, applied via props.color/props.background in render.js. -->
-
-
-## Phase 5: Persistence and Server Events
-
-- [x] `storage.js`: JSON store in `data/` (`path.join`, Windows safe)
-- [x] `api/documents.js`: CRUD routes
-- [x] `events.js`: EventEmitter hub; `document:loaded`, `document:saved`
-- [x] Debounced autosave + manual save; client emits `document:saved`
-- [x] Verify: reload, document persists  <!-- server round-trip verified end-to-end via HTTP (create/edit/GET/list/404/400); client boot+autosave wiring still needs a real-browser confirm -->
-
-<!-- storage.js is id-validated (no path traversal) and data-dir overridable via
-SCRAMBLE_DATA_DIR (test/storage). Client: api.js + persistence.js (debounced,
-coalesced autosave + Ctrl/Cmd+S). Also: clicking blank space below the last
-block adds a trailing paragraph unless that block is already empty. -->
+<!-- Core: src/core/turn-into.js (canTurnInto/turnIntoTargets/turnInto), colors.js,
+cloneWithIds in model.js. UI: components/HandleMenu.vue (panels: main/turn/text/bg),
+BlockView handle click + rowStyle from props.color/background. ctx gains
+turnInto/duplicate/moveUp/moveDown/setColor/copyLink + handle-menu state. -->
 
 
-## Phase 6: Configs, Page Style, Export
+## Phase V5 — Config, Page Style, Export per Config
 
-- [x] Configs: `default.json`, `notes.json`, `readonly.json`; `GET /api/configs/:name`
-- [x] Editor filters slash menu, shortcuts, and toolbar by config; `locked` renders view-only and server rejects saves
-- [x] Page style controls: full width, small text, font (default/serif/mono)
-- [x] `export.js`: walk tree, call `toMarkdown`/`toHTML` with helpers; `GET /api/documents/:id/export`; emit `export:requested`
-- [x] Verify: same doc exports valid Markdown and HTML per config; locked page cannot be edited  <!-- server verified end-to-end via curl (config route, md+html export per config output, locked PUT -> 403); client-side view-only render + page-style UI still need a real-browser confirm -->
+- [x] Block registry drives Markdown + HTML export; `getExport()` honors `config.output`
+- [x] Config gating of slash menu / shortcuts / toolbar (`config.blocks` / `config.toolbar`)
+- [x] `readonly` / `config.locked` view-only pass (contenteditable off; handle/slash/toolbar/shortcuts inert)
+- [x] Page style controls: full width, small text, font (default/serif/mono) — `PageStyle.vue`, `doc.style`, `setStyle`, `style-changed`
+- [ ] Verify (browser): same doc exports valid Markdown + HTML; locked doc is read-only; style toggles apply
 
-<!-- Block exporters (toMarkdown/toHTML) added to every block; driver in
-server/export.js reuses the client block modules and segmentsToMarkdown/HTML
-(test/export). Config filtering reads state.config in slash/shortcuts/toolbar.
-export.js block exporters are what the ``` -> code block (Phase 7) will extend. -->
+<!-- Config gating added to markdown shortcuts (slash/toolbar already gated).
+doc.style applied via rootClasses; components/PageStyle.vue control; ctx.setStyle +
+`style-changed`; getExport()/setStyle exposed. Example passes :config + a
+"Per config" export button. -->
 
 
-## Phase 7: Collapsible and Container Blocks
+## Phase V6 — Collapsible & Container Blocks
 
-- [ ] Toggle block (collapsible, nested children)
-- [ ] Collapsible headings: collapse hides content until next same-level heading (`block:collapsed`)
-- [ ] Callout and banner blocks (icon + colored background + children)
-- [ ] Code block syntax highlighting via highlight.js CDN (view mode)
-- [ ] Verify: collapse states persist, exports handle children
+- [x] Code block with syntax highlighting (view mode, host-provided highlight.js)
+- [x] Toggle block (collapsible, nested children) — completes the V4 Turn Into round-trip (group `text`)
+- [x] Collapsible headings (hide following siblings until next same-level heading; `block-collapsed`)
+- [x] Callout and banner blocks (icon + colored background + children)
+- [ ] Verify (browser): collapse states persist; exports handle children  <!-- collapse rule + toggle/callout exports Vitest-verified -->
 
-## Phase 8: Media, Embeds, Table, TOC
+<!-- Core: src/core/collapse.js (headingLevel, visibleAfterCollapse). Toggle reuses
+TextBlock (collapsibleChildren); Callout.vue serves callout + banner. BlockView
+gains the collapse caret + visibleChildren; ScrambleEditor filters top-level via
+visibleTop and adds ctx.toggleCollapsed + `block-collapsed`. -->
 
-- [ ] Image, video, audio, file blocks (URL-based)
-- [ ] Embed block (YouTube iframe + generic URL) and bookmark block using `GET /api/embed-meta`
-- [ ] Table block: add/remove rows and columns, cell editing
-- [ ] Table of Contents block: auto-generated from headings, sticky option, click scrolls
-- [ ] Verify: each block edits, views, and exports in both formats
 
-## Phase 9: Extension API and Contact Block
+## Phase V7 — Media, Embeds, Table, TOC
 
-- [ ] Freeze and document the public `Scramble.registerBlock()` contract
-- [ ] `api/contacts.js`: seeded JSON contacts with `?filter=`
-- [ ] `extensions/contact-block.js`: search input with filtered results in edit mode, saved contact card in view mode, both exporters
-- [ ] Enable `contact` only in `default.json` to prove config gating
-- [ ] Verify: insert, filter, pick, save, reload, export
+- [x] Image/video/audio/file blocks (URL + drop upload via `adapters.upload`, caption) — one `MediaBlock.vue`
+- [x] Media resize (drag) + gear config (align, video options); `media-resized`/`media-configured`
+- [x] Embed (YouTube iframe + generic) and bookmark (via `adapters.fetchEmbedMeta`)
+- [x] Table block: add/remove rows + columns, cell editing
+- [x] Table of Contents block: auto from headings, sticky, click-scroll
+- [ ] Verify (browser): each block edits, views, and exports in both formats  <!-- exporters (media/embed/bookmark/table/toc) + youtubeId Vitest-verified -->
 
-## Phase 10: Multi-Block Selection and Layout
+<!-- Core: src/core/embed.js (youtubeId), src/core/block-exporters.js (framework-free
+media/embed/bookmark/table/toc export). Components: MediaBlock (kind prop, resize +
+gear), EmbedBlock, BookmarkBlock, TableBlock + TableCell, TocBlock. blocks/index.js
+registers all; ScrambleEditor emits media-resized/media-configured. -->
 
-- [ ] Multi-block selection (click-drag, Shift+Arrow); group move, delete, convert, color
-- [ ] Cross-block text selection for copy and delete
-- [ ] Columns block: drag a block beside another to create columns; nested rendering and export
-- [ ] Page-link block (sub-page as block)
-- [ ] Verify: select five blocks and convert them all, two-column layout survives reload and export
 
-## Phase 11: Live Collaboration
+## Phase V8 — Extension API & Contact Block
 
-- [ ] `collab.js`: WebSocket rooms per document; presence with `user:joined`/`user:left`
-- [ ] `collab-client.js`: avatars in header, colored outline on the block a remote user is editing (live cursors)
-- [ ] Broadcast block ops (`create`, `update`, `delete`, `move`, `convert`), last-write-wins, emit `change:broadcast`
-- [ ] Config flag `"collaboration": true|false`
-- [ ] Verify: two windows sync presence, cursors, and edits
+- [x] `registerBlock()` public API (custom block = Vue component + registry entry)
+- [x] Document + freeze the public extension contract (`docs/extensions.md`; `useEditor` + `version` + helpers exported from `src/index.js`)
+- [x] Contact block sample fed by `adapters.fetchContacts` (edit search, view card, exporters)
+- [ ] Verify (browser): register a custom Vue block from the example; insert, edit, export  <!-- registration + custom-block export path Vitest-verified -->
 
-## Phase 12: Comments, Mentions, History
+<!-- src/index.js now exports useEditor + version + segment helpers (the stable
+contract). docs/extensions.md documents it. examples/ContactBlock.vue is a sample
+custom block registered in HostApp.vue (search via adapters.fetchContacts, card
+view, md/html exporters); added to the starter doc. -->
 
-- [ ] `api/comments.js` + `comments.js` UI: threaded comments anchored to a block, resolve action (`comment:added`, `comment:resolved`)
-- [ ] `@mention` in text and comments, autocompleted from the contacts API (`mention:inserted`)
-- [ ] `history.js`: snapshot on every save (keep latest 50), list and restore endpoints, `history:restored` on client
-- [ ] Verify: comment on a block, resolve it, restore an older version
 
-## Phase 13: Advanced Blocks (optional)
+## Phase V9 — Multi-Block Selection & Layout
 
-- [ ] Synced block: `data.sourceBlockId`, editing the source updates all references across documents
-- [ ] Inline math via KaTeX CDN (`$...$` shortcut)
-- [ ] Button block: label + action (`emit-event` or `open-url`), fires `button:triggered`
-- [ ] Optional local image upload endpoint (multipart, saved under `data/uploads/`)
-- [ ] Verify: synced block updates in two documents
+- [x] Multi-block selection (rubber-band / Esc-select / Arrow / Shift+Arrow / Cmd-click); group move, delete, convert, color
+- [x] Cross-block text selection for copy + delete
+- [x] Columns + column blocks (side-drop to create; nested render + export)
+- [x] Page-link block (host provides doc list via `adapters.listDocuments`; `page-link-open` event)
+- [ ] Verify (browser): select five blocks and convert; two-column layout survives reload + export  <!-- columns/page-link export Vitest-verified; interactive selection needs a browser -->
 
-## Phase 14: Polish and Tests
+<!-- ScrambleEditor: selection state + group ops (delete/convert/color/move) +
+createColumns. components/SelectionLayer.vue (toolbar, keyboard, cmd/shift-click,
+rubber-band, cross-block copy+delete). blocks: Columns.vue/Column.vue (container:
+true → BlockView skips default children + side-drop), PageLinkBlock.vue.
+block-exporters gains pageLink*. Example provides adapters.listDocuments. -->
 
-- [ ] Unit tests: registry, Turn Into mapping, mark exporters, per-block exporters, config filtering, storage, history prune
-- [ ] Focus mode (dim inactive blocks) and word count footer
-- [ ] Styling pass in `styles.css`
-- [ ] README accuracy pass: Linux, macOS, Windows instructions verified
 
-## Manual Test Checklist (run after every phase)
+## Phase V10 — Collaboration (interface only)
 
-1. `npm run dev` starts without errors
-2. Page loads at http://localhost:3000, no console errors
-3. Features from all earlier phases still work
-4. Phase 5+: document survives reload
-5. Phase 6+: export returns the configured format; locked page is read-only
-6. Phase 11+: two windows sync presence and edits
-7. Phase 12+: comments and history restore work
+- [x] Presence + change-broadcast **interface**: `@change` + `@cursor-changed` out, `presence` prop in (host owns transport)
+- [x] Remote cursor / selection rendering driven by host-supplied presence data (avatars + colored block outline + name tags)
+- [ ] Verify (browser): two tabs sync via the example's BroadcastChannel
 
-## Out of Scope
+<!-- ScrambleEditor: `presence` prop + presenceMap/presenceFor, `cursor-changed`
+emit on selectionchange, presence avatar bar. BlockView: remote outline
+(--sc-remote-color) + name tags. Example: BroadcastChannel broadcasts doc +
+cursor and feeds :presence (naive last-write-wins, documented). -->
 
-- Authentication and user accounts
-- Databases
-- CRDT/OT conflict resolution
-- Notion-style inline databases with multiple views (Kanban, Calendar, Timeline)
-- AI writing features
-- Mobile-specific UI
+
+## Phase V11 — Comments, Mentions, History (interface only)
+
+- [x] Comment threads anchored to a block; `comments` prop in + `comment-added`/`comment-resolved` out (host stores)
+- [x] `@mention` autocompleted from `adapters.fetchContacts`; inserts a mention segment; `mention-inserted`
+- [x] History: host snapshots on `@change`, restores via `v-model` (example version panel)
+- [ ] Verify (browser): example implements comments + version restore host-side
+
+<!-- ScrambleEditor: `comments` prop + commentsFor/openComments + insertMention;
+components/CommentsLayer.vue (thread popover), MentionMenu.vue (@ via fetchContacts).
+HandleMenu gains "Comment"; BlockView shows a comment badge. Example wires comments
+to localStorage, a history version panel (snapshot on save + restore via v-model),
+and mentions through fetchContacts. History needs no component code — host owns it. -->
+
+
+## Phase V12 — Polish & Tests
+
+- [x] Focus mode (`focusMode` prop, dims inactive blocks) + word count (`#footer` slot, `word-count` event, `getWordCount()`)
+- [x] Styling pass; light/dark tokens (`theme` prop + `prefers-color-scheme`)
+- [x] Component tests with `@vue/test-utils` + `jsdom` (`src/ScrambleEditor.test.js`); expanded Vitest core coverage
+- [x] README accuracy pass (props/events/methods/blocks/status); lib build config verified
+- [ ] Verify (browser + Node 18): `npm test` (Vitest incl. jsdom component tests) + `npm run build` produce `dist/`
+
+<!-- ScrambleEditor: focusMode + theme props, activeBlockId tracking, wordCount/
+charCount + `word-count` emit + `#footer` slot + getWordCount(). BlockView dims via
+`.sc-dim`. styles.css: `.sc-dark`/prefers-color-scheme tokens + focus dim.
+package.json: @vue/test-utils + jsdom. Component tests use `// @vitest-environment
+jsdom`. -->
+
+
+## Manual Test Checklist (after each phase, on Node 18+)
+
+1. `npm install` then `npm run dev` starts with no console errors
+2. Type/edit a document; slash menu, shortcuts, toolbar work
+3. `v-model` reflects edits; `@change`/typed events fire (see example event log)
+4. The example client persists across reload (localStorage)
+5. `getMarkdown()` / `getHTML()` return valid output
+6. `npm test` (Vitest core) passes; `npm run build` produces `dist/`
+
+## Out of Scope (belongs to the host, not the component)
+
+- A concrete backend / database (the component is backend-agnostic)
+- Auth, real-time transport, file storage (provided via adapters)
+- Nuxt / SSR-specific concerns (component is client-side Vue 3)

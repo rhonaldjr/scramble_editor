@@ -1,19 +1,40 @@
 {
-  "name": "scramble",
+  "name": "scramble-editor-vue",
   "version": "0.1.0",
-  "description": "A lightweight, extensible block-based text editor inspired by Notion and ClickUp Docs.",
+  "description": "Scramble — a Notion-style block editor as an exclusive Vue 3 component. Bring your own backend.",
   "type": "module",
   "license": "MIT",
+  "keywords": ["vue", "vue3", "editor", "block-editor", "rich-text", "wysiwyg", "notion"],
+  "files": ["dist", "src"],
+  "main": "./dist/scramble-editor.umd.cjs",
+  "module": "./dist/scramble-editor.js",
+  "exports": {
+    ".": {
+      "import": "./dist/scramble-editor.js",
+      "require": "./dist/scramble-editor.umd.cjs"
+    },
+    "./style.css": "./dist/scramble-editor.css"
+  },
+  "sideEffects": ["**/*.css"],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "vue": "^3.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^25.0.1",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.4",
+    "vue": "^3.5.13"
+  },
   "engines": {
     "node": ">=18"
-  },
-  "scripts": {
-    "dev": "node --watch server/index.js",
-    "start": "node server/index.js",
-    "test": "node --test"
-  },
-  "dependencies": {
-    "express": "^4.19.2",
-    "ws": "^8.17.0"
   }
 }

@@ -1,0 +1,38 @@
+name: CI
+
+# Test + build the component on every push and pull request.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # Use `npm ci` once package-lock.json is committed (faster + reproducible).
+      - name: Install
+        run: npm install
+
+      - name: Unit + component tests
+        run: npm test
+
+      - name: Build library
+        run: npm run build
+
+      - name: Upload dist
+        if: matrix.node == 20
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist

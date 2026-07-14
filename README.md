@@ -1,211 +1,223 @@
 # Scramble
 
-A lightweight, extensible block-based text editor inspired by Notion and ClickUp Docs. Built with Node.js and vanilla JavaScript, designed to be embedded in your own apps and extended with custom blocks.
+A Notion / ClickUp Docs–style **block editor delivered as one exclusive Vue 3
+component**. Drop `<ScrambleEditor>` into any Vue 3 app, `v-model` the document,
+listen to events, and wire your **own backend** through adapter functions.
 
-## Background: What Notion and ClickUp Get Right
+> **Backend-agnostic by design.** Scramble ships no server. Persistence,
+> uploads, contacts, embeds, collaboration, comments, and history are the host
+> app's job — the component exposes an interface (`adapters` props + events) and
+> the host implements the behavior. See [`examples/`](examples/).
 
-**Notion** is fully block-native. Everything (text, media, embeds, layouts, even sub-pages) is an independent, movable, convertible block. Its standout features: Turn Into conversion between block types, a block handle menu (duplicate, delete, copy block link, comment, color), slash commands, Markdown shortcuts, toggles and callouts, columns and nesting, synced blocks, auto Table of Contents, 500+ embeds, inline math, threaded comments on blocks, version history, and page styling (full width, typography).
+- **Vue 3 + Vite**, single-file components. Only `src/core/*` is framework-free
+  logic (segments, tree ops, export) — everything else is Vue.
+- **`v-model`** the document (push and pull).
+- **Typed events** for everything, plus a catch-all `@event`.
+- **Imperative API** via template ref (`getMarkdown`, `setDocument`, `enable/disable`, …).
+- **Extensible** — register a custom block as a Vue component.
 
-**ClickUp Docs** is a strong block-aware editor optimized for work tied to app data. Its standout features: banners, collapsible headings, block color, sticky Table of Contents, tables, multi-block selection with drag guides, a full rich-text toolbar (underline, strikethrough, highlight, alignment), resolvable inline comment threads, nested subpages, page protection, templates, focus mode, word count, and export options.
+## Requirements & scripts
 
-Scramble adopts the best of both, scaled to a local, framework-free project: a block engine where blocks are pure data, Turn Into conversion, a handle menu, slash commands plus Markdown shortcuts, collapsible blocks, app-aware extension blocks (like a Contact block fed by your own data), per-page tool configuration, comments, version history, presence-based collaboration, and configurable Markdown or HTML output.
+Node 18+ (Vite 6).
 
-## Features
+```bash
+npm install
+npm run dev      # run the examples gallery (index.html → examples/)
+npm run build    # build the library into dist/
+npm test         # unit (Vitest) + component tests (jsdom)
+```
 
-### Blocks
+> **Dependencies:** the published component has **no runtime dependencies** — Vue
+> is a peer dependency. Everything in `devDependencies` (Vite, Vitest, jsdom) is
+> build/test tooling only and is never shipped to consumers, so `npm audit`
+> findings there do not affect apps that install this package.
 
-- **Structural**: paragraph, heading (h1-h3, collapsible), quote, callout, banner, divider, code (syntax highlighted)
-- **Lists**: bulleted, numbered, checklist, toggle (collapsible, nestable)
-- **Media**: image, video, audio, file (URL-based, optional local upload)
-- **Embeds**: YouTube, generic iframe embed, web bookmark with preview
-- **Data**: table (rows and columns), Table of Contents (auto-generated from headings, sticky)
-- **Layout**: columns (side-by-side blocks), nested children on any container block, page-link block (sub-pages as blocks)
-- **Advanced (optional phases)**: synced block (same content across pages), inline math (KaTeX), button block (triggers configurable actions)
-- **Extension sample**: Contact block that pulls filtered contacts from your app API
+## Usage
 
-### Editing and Interaction
+```vue
+<script setup>
+import { ref } from 'vue';
+import { ScrambleEditor } from 'scramble-editor-vue';
+import 'scramble-editor-vue/style.css';
 
-- **Slash menu**: type `/` for every enabled block, plus colors and actions
-- **Turn Into**: convert almost any block into any compatible type (text to heading to toggle to checklist, and so on)
-- **Block handle menu (drag handle)**: duplicate, delete, turn into, move up/down, copy block link, comment, text color, background color
-- **Markdown shortcuts**: `# `, `## `, `- `, `1. `, `[] `, `> `, ``` ``` ```, `---` auto-convert as you type
-- **Inline formatting toolbar** on selection: bold, italic, underline, strikethrough, inline code, link, text color, highlight
-- **Keyboard behavior**: Enter splits, Backspace merges, Tab/Shift+Tab nests and un-nests, arrows move focus
-- **Multi-block selection**: click-drag or Shift+Arrow to select several blocks, then move, delete, or convert together
-- **Collapsible headings and toggles**: hide content until the next same-level heading
-- **Cross-block text selection** for copy and delete
+const doc = ref(loadFromMyBackend());   // v-model — the host owns the document
+const editor = ref(null);               // template ref — imperative API
 
-### Collaboration and History
+// The host owns storage. Return a URL (or { url }).
+const adapters = {
+  upload: async (file) => ({ url: await myStorage.put(file) }),
+  fetchContacts: async (q) => myApi.contacts(q),
+  fetchEmbedMeta: async (url) => myApi.embedMeta(url),
+};
+</script>
 
-- **Presence**: see avatars and live cursors of other users on the page (WebSocket)
-- **Block comments**: threaded, resolvable comments anchored to a block; `@mention` a contact inside comments and text
-- **Version history**: automatic snapshots on save, list and restore previous versions
+<template>
+  <ScrambleEditor
+    ref="editor"
+    v-model="doc"
+    :readonly="false"
+    :features="{ slashMenu: true, toolbar: true, dragAndDrop: true, shortcuts: true }"
+    :adapters="adapters"
+    @ready="onReady"
+    @change="(d) => saveToMyBackend(d)"
+    @media-uploaded="(e) => console.log(e)"
+    @event="({ type, detail }) => audit(type, detail)"
+  />
+</template>
+```
+
+### Props
+
+| Prop | Type | Purpose |
+| --- | --- | --- |
+| `v-model` (`modelValue`) | Object | The document — two-way bound. |
+| `config` | Object | `{ blocks?: string[], toolbar?: string[], output?: 'markdown'\|'html', locked?: boolean }`. |
+| `features` | Object | Toggle functionality: `slashMenu`, `shortcuts`, `toolbar`, `dragAndDrop`, `handleMenu`, `multiSelect`, `upload`, `mediaControls`, `pageStyle`. |
+| `readonly` | Boolean | Render view-only. |
+| `adapters` | Object | Your backend: `upload(file)`, `fetchContacts(q)`, `fetchEmbedMeta(url)`, `listDocuments()`. All optional. |
+| `presence` | Array | Remote users `[{ id, name, color, blockId }]` (collaboration). |
+| `comments` | Array | Comment threads `[{ id, blockId, resolved, messages }]`. |
+| `focusMode` | Boolean | Dim inactive blocks. |
+| `theme` | String | `'auto'` (default) \| `'light'` \| `'dark'`. |
+
+A `#footer` slot receives `{ words, chars }` for a word-count footer.
 
 ### Events
 
-- Client side: DOM CustomEvents for every mutation (`block:created`, `block:updated`, `block:deleted`, `block:moved`, `block:converted`, `block:duplicated`, `selection:changed`, `comment:added`, `comment:resolved`, `mention:inserted`, `document:saved`, and more)
-- Server side: Node EventEmitter hooks (`document:loaded`, `document:saved`, `block:validated`, `export:requested`, `history:snapshot`, `user:joined`, `user:left`, `comment:added`)
+`ready`, `change`, `update:modelValue`, `word-count`, and typed: `block-created`,
+`block-updated`, `block-deleted`, `block-moved`, `block-converted`,
+`block-duplicated`, `block-collapsed`, `slash-selected`, `shortcut-applied`,
+`media-uploaded`, `media-resized`, `media-configured`, `selection-blocks`,
+`page-link-open`, `cursor-changed`, `comment-added`, `comment-resolved`,
+`mention-inserted`, … plus a catch-all **`event`** with `{ type, detail }`.
 
-### Extensibility and Configuration
+### Methods (template ref)
 
-- **Extension API**: register custom blocks with `Scramble.registerBlock()`, including edit/view renderers, exporters, and Turn Into compatibility
-- **Per-page configuration**: JSON config per page declares enabled blocks, toolbar tools, collaboration, comments, history, page style, and output format
-- **Page styling**: full-width toggle, small text, font choice (default, serif, mono)
-- **Configurable output**: export as Markdown or HTML per page config
-- **Page lock**: mark a page read-only in its config
+`getDocument()`, `setDocument(doc)`, `getMarkdown()`, `getHTML()`,
+`getExport()` (per `config.output`), `getWordCount()`, `setStyle(patch)`,
+`enable(feature)`, `disable(feature)`, `setReadonly(v)`, `focus()`,
+`registerBlock(def)`.
 
-### Extras
+## Bring your own backend
 
-- Focus mode (dim everything except the active block)
-- Word count in the footer
+The component calls the adapters you pass and emits events; it never talks to a
+server itself.
 
-## Project Structure
+- **Persistence** — `v-model` + `@change`. Save/load however your app does (REST, GraphQL, localStorage…). The example uses `localStorage`.
+- **`adapters.upload(file) → { url } | url`** — store dropped/selected media anywhere (S3, your API, an object URL). Without it, media blocks fall back to a URL field.
+- **`adapters.fetchContacts(query) → contact[]`** — power mentions / a contact block.
+- **`adapters.fetchEmbedMeta(url) → { title, image, … }`** — power bookmark previews.
+- **Collaboration / comments / history** — consumed via events + adapters; the component provides hooks, the host provides transport/storage.
 
-```
-scramble/
-├── server/
-│   ├── index.js            # Express app + WebSocket server
-│   ├── events.js           # Server-side EventEmitter hub
-│   ├── storage.js          # JSON file storage for documents
-│   ├── history.js          # Version snapshots and restore
-│   ├── export.js           # Markdown / HTML exporters
-│   ├── collab.js           # Presence + change broadcasting
-│   └── api/
-│       ├── documents.js    # CRUD + export routes
-│       ├── comments.js     # Block comment threads
-│       └── contacts.js     # Sample data API for Contact block and mentions
-├── public/
-│   ├── index.html          # Sample page hosting the editor
-│   ├── editor/
-│   │   ├── core.js         # Block engine, registry, event bus
-│   │   ├── blocks/         # Built-in block definitions
-│   │   ├── slash-menu.js
-│   │   ├── handle-menu.js  # Drag handle + block actions
-│   │   ├── toolbar.js      # Inline formatting toolbar
-│   │   ├── shortcuts.js    # Markdown + keyboard shortcuts
-│   │   ├── selection.js    # Multi-block selection
-│   │   ├── comments.js     # Comment UI
-│   │   └── collab-client.js
-│   ├── extensions/
-│   │   └── contact-block.js
-│   └── styles.css
-├── configs/
-│   ├── default.json        # All blocks, HTML output, collab on
-│   ├── notes.json          # Minimal blocks, Markdown output
-│   └── readonly.json       # Locked page example
-├── CLAUDE.md
-├── README.md
-└── Roadmap.md
-```
+See [`examples/HostApp.vue`](examples/HostApp.vue) for a working host app that
+implements persistence, autosave, an event log, and a mock upload adapter.
 
-## Requirements
-
-- Node.js 18 or newer
-- npm 9 or newer
-- A modern browser (Chrome, Firefox, Edge, Safari)
-
-No database required. Documents, comments, and history are JSON files on disk. Syntax highlighting (highlight.js) and optional math (KaTeX) load from CDN in the browser, so no build step is needed.
-
-## Running Locally
-
-### Linux (Pop!_OS 22.04 LTS and similar)
-
-```bash
-# Install Node.js 18+ if needed
-sudo apt update
-sudo apt install -y curl
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-
-git clone <your-fork-url> scramble
-cd scramble
-npm install
-npm run dev
-```
-
-Open http://localhost:3000.
-
-### macOS
-
-```bash
-brew install node
-
-git clone <your-fork-url> scramble
-cd scramble
-npm install
-npm run dev
-```
-
-Open http://localhost:3000.
-
-### Windows
-
-1. Install Node.js 18+ LTS from https://nodejs.org
-2. In PowerShell or Command Prompt:
-
-```powershell
-git clone <your-fork-url> scramble
-cd scramble
-npm install
-npm run dev
-```
-
-Open http://localhost:3000.
-
-### Testing collaboration
-
-Open the same document URL in two browser windows (one normal, one private). You should see presence avatars, live cursors, and edits syncing.
-
-## Configuration
-
-Each page references a config file. Example (`configs/notes.json`):
-
-```json
-{
-  "name": "notes",
-  "output": "markdown",
-  "blocks": ["paragraph", "heading", "bulleted-list", "checklist", "toggle", "code"],
-  "toolbar": ["bold", "italic", "code", "link"],
-  "collaboration": false,
-  "comments": false,
-  "history": true,
-  "locked": false,
-  "style": { "fullWidth": false, "smallText": false, "font": "default" }
-}
-```
-
-Set `"output": "html"` for HTML export. Add `"contact"` to `blocks` to enable the Contact block on that page. Set `"locked": true` for a read-only page.
-
-## Extending the Editor
+## Add your own block (Vue component)
 
 ```js
-Scramble.registerBlock({
-  type: "contact",
-  label: "Contact",
-  icon: "person",
-  turnIntoGroup: null,          // null = not convertible; "text" joins text conversions
-  create(data) { /* initial block data */ },
-  renderEdit(block, ctx) { /* element for edit mode */ },
-  renderView(block) { /* element for view mode */ },
-  toMarkdown(block) { /* markdown string */ },
-  toHTML(block) { /* HTML string */ }
+import { registerBlock } from 'scramble-editor-vue';
+import MyBlock from './MyBlock.vue';
+
+registerBlock({
+  type: 'my-block',
+  label: 'My block',
+  icon: '★',
+  component: MyBlock,                 // a .vue component; receives :block
+  create: (data) => ({ ...data }),
+  toMarkdown: (block, h) => '…',
+  toHTML: (block, h) => '…',
 });
 ```
 
-The sample Contact block calls `GET /api/contacts?filter=<query>` and lets the author search and pick a contact while designing the page. In view mode it renders the saved contact as a card. The same contacts API powers `@mentions` in text and comments.
+Inside the component, call `useEditor()` for the shared context and mutate
+`block.data` directly — Vue reactivity re-renders. See `src/blocks/*.vue`.
 
-## Scripts
+The full, stable extension contract (public API, `useEditor` context, adapters,
+events) is documented in **[docs/extensions.md](docs/extensions.md)**. A worked
+custom-block example is [`examples/ContactBlock.vue`](examples/ContactBlock.vue),
+registered by the host in [`examples/HostApp.vue`](examples/HostApp.vue).
 
-| Command        | Purpose                          |
-|----------------|----------------------------------|
-| `npm run dev`  | Start server with auto-reload    |
-| `npm start`    | Start server (production mode)   |
-| `npm test`     | Run unit tests                   |
+## Blocks
 
-## Contributing
+paragraph, heading 1–3, quote, bulleted/numbered/checklist, toggle, callout,
+banner, divider, code (highlight.js), image/video/audio/file (upload + resize +
+gear), embed, bookmark, table, table-of-contents, columns, page-link — plus your
+own via `registerBlock`.
 
-This project does not accept external contributions. Pull requests and issues from outside collaborators will be closed. You are welcome to fork the repository and make any changes in your fork, subject to the license.
+## Status
+
+Feature-complete against the reference implementation: blocks above, Turn Into +
+handle menu + colors, config gating + page style + per-config export, collapsible
+blocks, media, multi-block selection + cross-block copy/delete + columns, the
+extension API, and interfaces for collaboration / comments / mentions / history
+(host-wired — see [examples/HostApp.vue](examples/HostApp.vue)). All core logic
+is unit-tested (Vitest); component tests use `@vue/test-utils` + jsdom. See
+[Roadmap.md](Roadmap.md) for per-phase detail. Remaining work is browser-pass
+verification (this repo was authored without a browser).
+
+## Examples
+
+`npm run dev` opens a gallery ([examples/Gallery.vue](examples/Gallery.vue)) with:
+
+- **Full host app** ([HostApp.vue](examples/HostApp.vue)) — persistence
+  (localStorage autosave), event audit log, uploads, mentions, comments, version
+  history, presence over `BroadcastChannel`, focus mode, theme.
+- **Minimal** ([MinimalEditor.vue](examples/MinimalEditor.vue)) — just `v-model`.
+- **Persistence** ([PersistedEditor.vue](examples/PersistedEditor.vue)) — the
+  load / debounced-autosave / manual-save pattern in isolation.
+- **Read-only viewer** ([ReadonlyViewer.vue](examples/ReadonlyViewer.vue)) — a
+  published-page view + export.
+- Custom block ([ContactBlock.vue](examples/ContactBlock.vue)) registered from
+  the host app.
+
+## Build & consume
+
+Build the library:
+
+```bash
+npm run build     # → dist/scramble-editor.js (ESM), .umd.cjs (UMD), .css
+```
+
+Vite outputs an ESM + UMD bundle with Vue marked **external** (peer). Consume the
+built package from another app:
+
+```js
+// package.json depends on "scramble-editor-vue" and "vue"
+import { ScrambleEditor } from 'scramble-editor-vue';
+import 'scramble-editor-vue/style.css';
+```
+
+Or globally register it as a plugin:
+
+```js
+import Scramble from 'scramble-editor-vue';
+import 'scramble-editor-vue/style.css';
+app.use(Scramble); // <ScrambleEditor> available everywhere
+```
+
+Local link before publishing: `npm run build && npm pack` produces a tarball you
+can `npm install ./scramble-editor-vue-0.1.0.tgz` in a test app.
+
+## Publishing
+
+```bash
+npm version patch      # bump version
+npm run build
+npm publish --access public
+```
+
+## Continuous integration (GitHub Actions)
+
+Two workflows are included:
+
+- **[.github/workflows/ci.yml](.github/workflows/ci.yml)** — on every push / PR:
+  installs, runs `npm test`, runs `npm run build` on Node 18 + 20, and uploads
+  the `dist/` artifact. (After you commit `package-lock.json`, switch the install
+  step to `npm ci` for reproducible, cached installs.)
+- **[.github/workflows/publish.yml](.github/workflows/publish.yml)** — on a
+  published GitHub Release: builds, tests, and `npm publish` (with provenance).
+  Add an `NPM_TOKEN` repository secret (an npm **Automation** token) to enable it.
 
 ## License
 
-MIT. Forks and modifications are permitted. See LICENSE for details.
+MIT.

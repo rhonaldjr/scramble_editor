@@ -4,170 +4,161 @@ Guidance for Claude Code when working on Scramble. Read this before making chang
 
 ## What This Project Is
 
-Scramble is a block-based full-page editor (Notion / ClickUp Docs style) built with:
+Scramble is a **Notion / ClickUp Docs–style block editor delivered as one
+exclusive Vue 3 component** (`<ScrambleEditor>`), built with **Vite**. There is
+**no backend in this repo** — the component is backend-agnostic. Persistence,
+uploads, contacts, embeds, collaboration, comments, and history are the **host
+application's** responsibility, wired through `adapters` props and events the
+component exposes. `examples/` shows a host app implementing them.
 
-- **Server**: Node.js 18+, Express, `ws` for WebSockets, JSON file storage (no database)
-- **Client**: Vanilla JavaScript (ES modules), no framework, no build step. highlight.js and KaTeX may load from CDN in the browser only
-- **Output**: Documents export to Markdown or HTML based on per-page config
-
-Primary test environment is Pop!_OS 22.04 LTS. Everything must also work on Windows and macOS. Never hardcode POSIX-only paths; always use `path.join()`.
+- **Framework**: Vue 3 (`<script setup>`, Composition API), Vite, `.vue` SFCs.
+- **Only** `src/core/*` is framework-free plain JS (pure logic: segments, tree
+  ops, registry, exporter). Everything else is Vue.
+- **Output**: documents export to Markdown or HTML via each block's exporters.
 
 ## Commands
 
 ```bash
-npm install        # install dependencies
-npm run dev        # start with auto-reload (node --watch server/index.js)
-npm start          # production start
-npm test           # run node:test unit tests
+npm install     # dev/build tooling (Vite 6, Vitest, jsdom) — Node 18+
+npm run dev     # run the examples gallery (index.html → examples/)
+npm run build   # build the library into dist/
+npm test        # unit (Vitest, framework-free core) + component tests (jsdom)
 ```
 
-Server runs on http://localhost:3000. Port configurable via `PORT` env var.
+The shipped package has **no runtime deps** (Vue is a peer). Everything in
+`devDependencies` is tooling only. CI/publish live in `.github/workflows/`.
+
+## Repository Layout
+
+```
+src/
+  ScrambleEditor.vue        # the component: reactive doc, mutations, v-model, events, exposed API
+  index.js                  # library entry (component + registerBlock + toMarkdown/HTML)
+  styles.css
+  core/                     # FRAMEWORK-FREE plain JS (unit-tested)
+    segments.js             # rich-text segments + marks (pure)
+    model.js                # block-tree operations (pure)
+    registry.js             # block registry (type -> definition)
+    exporter.js             # Markdown / HTML export (pure)
+    id.js
+  composables/
+    editor.js               # provide/inject key + useEditor()
+    useEditableText.js      # contenteditable <-> segments bridge
+  components/
+    BlockView.vue           # recursive block renderer + drag
+    SlashMenu.vue
+    InlineToolbar.vue
+  blocks/
+    index.js                # registers built-ins (type -> Vue component + exporters)
+    TextBlock.vue ListItem.vue Divider.vue CodeBlock.vue ImageBlock.vue ...
+examples/                   # host apps consuming the component (Gallery + Minimal/Persisted/Readonly/HostApp)
+.github/workflows/          # CI (test + build) and publish (npm) automation
+```
 
 ## Implementation Rules
 
-1. **Work in byte-size steps.** Follow Roadmap.md phase by phase. Complete one task, verify it runs in the browser, commit, then continue. Never implement multiple phases in one pass.
-2. **No frameworks on the client.** Vanilla JS with ES modules. No React, no bundler, no TypeScript.
-3. **Minimal dependencies.** Allowed server deps: `express`, `ws`, `marked` (optional). Browser CDN scripts allowed: highlight.js, KaTeX. Ask before adding anything else.
-4. **Blocks are pure data.** A document is a tree of block objects. Rendering, editing, converting, and exporting are functions over that data. Never store rendered HTML as the source of truth. Inline formatting is stored as marks in block data, not raw HTML.
-5. **Everything goes through the event bus.** Client mutations emit CustomEvents; server mutations emit EventEmitter events. New features hook into events, never bypass them.
-6. **Config-driven.** Never hardcode which blocks, tools, or features are available. Read the page config and filter the registry and UI.
-7. **Cross-platform.** `path.join`, no shell-specific npm scripts, LF line endings.
+1. **Everything is Vue 3 + Vite.** New UI is a `.vue` SFC. The only non-Vue code
+   is `src/core/*` (pure functions). Never reintroduce a vanilla DOM editor
+   engine, and never import another UI framework.
+2. **No backend inside the component.** The component must never call a server.
+   It exposes an interface — `adapters` props and events — and the host wires
+   storage/upload/collab/etc. Anything I/O-shaped becomes an adapter function or
+   an event, demonstrated in `examples/`.
+3. **Blocks are pure data.** A document is a tree of block objects; inline
+   formatting is **marks in `segments`**, never raw HTML. A block type = a Vue
+   component **plus** a registry entry (`create`, `toMarkdown`, `toHTML`, meta).
+4. **Reactivity-driven.** Mutate the reactive `doc` (via `src/core/model.js`
+   ops) and Vue re-renders — no manual re-render passes. Editing bridges the
+   contenteditable DOM to `segments` through `useEditableText`.
+5. **Everything observable.** Every mutation calls `markChanged()` (drives
+   `v-model`) and `emitEvent()` (typed Custom-style events). Features hook
+   events; they do not bypass them.
+6. **Config- and feature-driven.** `config` gates available blocks/toolbar;
+   `features` (+ `enable/disable`) toggle functionality; `readonly` renders
+   view-only. Never hardcode which blocks/tools exist.
+7. **Extensible.** `registerBlock()` is the public API. Custom blocks are Vue
+   components authored by consumers.
 
 ## Core Data Model
 
 ```js
 // Document
-{
-  id: "doc-abc123",
-  title: "My Page",
-  config: "default",            // name of config in /configs
-  style: { fullWidth: false, smallText: false, font: "default" },
-  blocks: [ /* Block[] */ ],
-  updatedAt: "ISO string"
-}
+{ id, title, style: { fullWidth, smallText, font }, blocks: [ /* Block[] */ ] }
 
 // Block
 {
-  id: "blk-xyz789",
-  type: "paragraph",            // must exist in the registry
-  data: {
-    // type-specific. Text blocks use rich segments:
-    segments: [
-      { text: "Hello ", marks: [] },
-      { text: "world", marks: ["bold", "italic"] },
-      { text: "@Jane", marks: [], mention: { contactId: "c1" } }
-    ]
+  id, type,                     // type must exist in the registry
+  data: {                       // type-specific. Text blocks use segments:
+    segments: [ { text, marks: ['bold'], link?, mention? } ]
   },
-  props: {                      // presentation, any block type
-    color: null,                // text color token
-    background: null,           // background color token
-    collapsed: false            // toggles, collapsible headings
-  },
+  props: { color, background, collapsed },
   children: []                  // nested blocks (toggle, columns, lists, callout)
 }
-
-// Comment thread (stored per document in data/comments/)
-{
-  id: "cmt-1", blockId: "blk-xyz789", resolved: false,
-  messages: [{ author: "user-1", text: "...", mentions: [], at: "ISO" }]
-}
-
-// History snapshot (data/history/<docId>/<timestamp>.json)
-// Full document copy, written on save, pruned to the latest 50
 ```
 
-Special block notes:
-- **columns**: `children` is an array of column blocks; each column's `children` are its content
-- **table**: `data.rows` is a 2D array of cell segment arrays
-- **toc**: no data; renders from current headings at render time
-- **synced**: `data.sourceBlockId`; render resolves the source block. Editing the source updates all references
-- **page-link**: `data.docId`; renders the linked document title
-- **embed / bookmark**: `data.url` plus cached metadata
-- **button**: `data.label`, `data.action` (`emit-event`, `open-url`); actions run through the event bus
+Special blocks: `columns` (children are `column` blocks), `table`
+(`data.rows` = 2D cell-segment arrays), `toc` (renders from headings),
+`page-link` (`data.docId`), media/embed (`data.url` + host-provided metadata).
 
 ## Block Registry Contract
 
 ```js
-{
-  type: string,                 // unique, kebab-case
-  label: string,                // slash menu label
-  icon: string,
-  turnIntoGroup: string|null,   // blocks sharing a group are inter-convertible
-                                // built-in groups: "text" (paragraph, headings,
-                                // lists, quote, callout, toggle), null = not convertible
-  create(data?) => blockData,
-  renderEdit(block, ctx) => HTMLElement,
-  renderView(block) => HTMLElement,
-  toMarkdown(block, helpers) => string,
+registerBlock({
+  type, label, icon, group,        // group = Turn Into group ('text' | null)
+  component,                       // Vue component (receives :block)
+  componentProps?,                 // extra props (e.g. tag/marker)
+  editableText?, listMarker?, continuationType?, void?,
+  create(data) => blockData,
+  toMarkdown(block, helpers) => string,   // helpers: renderSegments, renderChildren(Raw), doc
   toHTML(block, helpers) => string,
-  validate?(block) => boolean   // optional server-side validation
-}
+});
 ```
 
-`ctx` provides `{ emit, update, api, config }`. `helpers` in exporters provides `renderChildren(block)` and `renderSegments(segments)` so blocks do not reimplement inline mark export.
+## Editor Context (provide/inject)
 
-Turn Into: converting within a group maps `segments` and `children` across types and emits `block:converted`. Converting a heading to a toggle keeps children; converting a list to paragraphs flattens items.
+`useEditor()` returns the shared context: `doc`, `config`, `adapters`,
+`readonly`, `focusRequest`, `rootEl`, `isEnabled(feature)`, `emitEvent`,
+`markChanged`, and mutations (`splitBlock`, `mergeWithPrevious`, `indent`,
+`outdent`, `moveBlock`, `removeBlock`, `slashPick`, `focusPrevious/Next`,
+`createBlock`, `requestFocus`). Block components call these instead of touching
+internals.
 
-## Event Catalog
+## Host Interface (what the consumer wires — NOT in the component)
 
-Client (CustomEvents on the editor root):
-- Blocks: `editor:ready`, `block:created`, `block:updated`, `block:deleted`, `block:moved`, `block:converted`, `block:duplicated`, `block:collapsed`
-- Input/UI: `selection:changed`, `slash:opened`, `slash:selected`, `shortcut:applied`, `mention:inserted`, `button:triggered`
-- Comments: `comment:added`, `comment:resolved`
-- Document: `document:saved`, `history:restored`
+- **Persistence**: `v-model` + `@change` — the host saves/loads however it wants.
+- **`adapters.upload(file) => { url } | url`** — store dropped/selected media.
+- **`adapters.fetchContacts(query) => contact[]`** — mentions / contact block.
+- **`adapters.fetchEmbedMeta(url) => meta`** — bookmark previews.
+- **Collaboration / comments / history**: consumed via events + adapters; the
+  component provides hooks, the host provides transport/storage.
 
-Server (EventEmitter in `server/events.js`):
-- `document:loaded`, `document:saved`, `block:validated`, `export:requested`, `history:snapshot`, `comment:added`, `comment:resolved`, `user:joined`, `user:left`, `change:broadcast`
+## Events Catalog
 
-When adding a feature, add its events here and document the payload shape in a comment where the event is emitted.
-
-## Collaboration Design
-
-Keep it simple. No CRDTs, no Yjs, no operational transforms.
-- WebSocket per open document: `ws://host/collab/:docId`
-- Presence: server tracks connected clients per doc, broadcasts join/leave and cursor block position; client renders avatars and a colored outline on the block a remote user is editing
-- Changes: client sends block-level ops (`create`, `update`, `delete`, `move`, `convert`); server applies last-write-wins and rebroadcasts
-- Good enough for local testing; document conflicts as a known limitation
-
-## API Endpoints
-
-```
-GET    /api/documents                  list
-POST   /api/documents                  create
-GET    /api/documents/:id              load
-PUT    /api/documents/:id              save (writes history snapshot)
-GET    /api/documents/:id/export       md or html per config
-GET    /api/documents/:id/history      list snapshots
-POST   /api/documents/:id/restore      restore a snapshot
-GET    /api/documents/:id/comments     list threads
-POST   /api/documents/:id/comments     add message / thread
-PUT    /api/comments/:id/resolve       resolve thread
-GET    /api/configs/:name              load page config
-GET    /api/contacts?filter=q          contacts for Contact block and mentions
-GET    /api/embed-meta?url=...         title/thumbnail for bookmark blocks
-```
-
-Respect `config.locked`: the server rejects saves to locked pages; the client renders view mode only.
+Typed events (also surfaced via a catch-all `@event` `{ type, detail }`):
+`ready`, `change`, `update:modelValue`, `block-created`, `block-updated`,
+`block-deleted`, `block-moved`, `block-converted`, `block-duplicated`,
+`block-collapsed`, `selection-blocks`, `slash-opened`, `slash-selected`,
+`shortcut-applied`, `media-uploaded`, `media-resized`, `media-configured`,
+`page-link-open`, `block-custom`. Add new events here and document the payload
+where emitted.
 
 ## Testing Expectations
 
-- Built-in `node:test` runner only
-- Unit test: registry, Turn Into mapping, segment/mark exporters, both exporters per block, config filtering, storage, history prune
-- Manual checklist at the end of Roadmap.md; run it after each phase
-- Verify in the browser before declaring a phase done
+- **Vitest** for `src/core/*` (pure, no DOM) — the primary guaranteed coverage.
+- Component behavior may be tested with `@vue/test-utils` + `jsdom` (add as a
+  devDependency when writing those). Verify the demo in a browser after changes.
 
 ## Style
 
-- ES modules (`"type": "module"`)
-- 2-space indent, semicolons, single quotes
-- Small files: split past ~250 lines
-- JSDoc on exported functions only
+- Vue 3 `<script setup>`, Composition API. 2-space indent, semicolons, single quotes.
+- Small SFCs; share logic via composables in `src/composables/`.
+- Keep `src/core/*` free of any Vue import.
 
 ## Do Not
 
-- No build step, bundler, or transpiler
-- No authentication (single local user identity per browser tab is fine for presence)
-- No databases
-- No CRDT/OT
-- No storing rendered HTML in documents
-- No external contribution tooling (no CONTRIBUTING.md, no PR templates)
+- No backend, server, or direct network calls inside the component (use adapters/events).
+- No vanilla DOM editor engine; no non-Vue UI framework.
+- No storing rendered HTML as the document source of truth (marks in segments).
+- No hardcoding which blocks/tools are available (read config).
+- No external contribution tooling (no CONTRIBUTING.md, no PR templates).
+```
