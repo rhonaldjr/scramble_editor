@@ -1,7 +1,7 @@
 <template>
   <div
     class="sc-block"
-    :class="{ 'sc-selected': selected, 'sc-edge-left': edge === 'left', 'sc-edge-right': edge === 'right', 'sc-remote': remote.length, 'sc-dim': dimmed }"
+    :class="[alignClass, wrapClass, { 'sc-selected': selected, 'sc-edge-left': edge === 'left', 'sc-edge-right': edge === 'right', 'sc-remote': remote.length, 'sc-dim': dimmed }]"
     :style="remote.length ? { '--sc-remote-color': remote[0].color } : {}"
     :data-block-id="block.id"
     :data-type="block.type"
@@ -76,6 +76,15 @@ const visibleChildren = computed(() => {
 function toggleCollapse() {
   ctx.toggleCollapsed(props.block.id);
 }
+
+const alignClass = computed(() => {
+  const a = props.block.props && props.block.props.align;
+  return a && a !== 'left' ? `sc-align-${a}` : null;
+});
+const wrapClass = computed(() => {
+  const w = props.block.props && props.block.props.wrap;
+  return w === 'left' || w === 'right' ? `sc-wrap-${w}` : null;
+});
 
 const rowStyle = computed(() => {
   const p = props.block.props || {};

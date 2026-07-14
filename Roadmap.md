@@ -264,7 +264,7 @@ forking CSS.
 Two new blocks that add lightweight interactivity to a document.
 
 - [x] `button` block: editable label, configurable colors (text + background/accent) and style (filled/outline), and a click behavior — open a hyperlink (URL, same/new tab) or emit a `button-clicked` event the host handles; ⚙ gear for label/URL/target/colors/style; exporters (HTML `<a>`/`<button>`, Markdown link)
-- [x] `accordion` block (container, collapsible): editable **title** (rich text) + editable **body** children (any blocks); expand/collapse toggle with persisted `collapsed` state; `initChildren` seeds a paragraph; exporters (HTML `<details>`/`<summary>`, Markdown)
+- [x] `accordion` block: a group of **`accordion-item`** blocks (each: editable rich-text **title** + editable **body** children, collapse toggle with persisted `collapsed`); **+ Add accordion item** appends more; per-item remove; exporters (group `<div>` of `<details>`/`<summary>`, Markdown)
 - [x] Register both in the slash menu; readonly renders view-only (button still navigates/emits; accordion still toggles)
 - [x] Example: a button wired to `@button-clicked` (host action) + a hyperlink button; a starter accordion
 - [ ] Verify (browser): configure a button's colors + link/action; edit and toggle an accordion; both persist + export
@@ -274,6 +274,22 @@ colors }), AccordionBlock.vue (container; data.title segments + children;
 props.collapsed). registry entries + initChildren (accordion). block-exporters
 button*/accordion*. ScrambleEditor emits button-clicked. Reuses collapse toggle
 pattern (see toggle block) + GearColor for button colors. -->
+
+
+## Phase V19 — Block Alignment & Text Wrap
+
+Layout controls shared across block types.
+
+- [x] Block alignment `props.align` (left default / center / right) applied content-aware in render (text-align for text; margin-auto for media/document/embed/web page; justify for buttons); `ctx.setProps(id, patch)`
+- [x] Set alignment via the **handle (block) menu** for any block, and via the **⚙ gear** for blocks that have one (media, document, button)
+- [x] Text wrap `props.wrap` (left / right) floats a block so surrounding text flows around it — for **image, document, button** (set in their gears)
+- [x] Migrate media/button alignment onto `props.align` (media keeps a `data.align` fallback for old docs); image export reads `props.align`
+- [ ] Verify (browser): center/right-align a paragraph + an image; float an image left and confirm text wraps
+
+<!-- BlockView adds sc-align-*/sc-wrap-* from props.align/props.wrap; CSS is
+content-aware. ctx.setProps merges into block.props. HandleMenu Align row.
+Gears (Media/Document/Button) get Align + Wrap. AccordionBlock = group of
+accordion-item blocks (slashHidden) with "+ Add accordion item". -->
 
 
 ## Manual Test Checklist (after each phase, on Node 18+)

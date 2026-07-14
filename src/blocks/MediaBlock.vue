@@ -1,5 +1,5 @@
 <template>
-  <figure class="sc-media" :class="[`sc-media--align-${block.data.align || 'left'}`, { 'sc-fit': fit }]">
+  <figure class="sc-media" :class="{ 'sc-fit': fit }">
     <template v-if="block.data.url">
       <div class="sc-media__frame" :style="frameStyle">
         <img v-if="kind === 'image'" class="sc-media__img" :src="block.data.url" :alt="block.data.caption || ''" />
@@ -35,9 +35,21 @@
                   v-for="a in ['left', 'center', 'right']"
                   :key="a"
                   class="sc-media-gear__btn"
-                  :class="{ 'is-active': (block.data.align || 'left') === a }"
+                  :class="{ 'is-active': align === a }"
                   @mousedown.prevent="setAlign(a)"
                 >{{ a }}</button>
+              </span>
+            </div>
+            <div class="sc-media-gear__row">
+              <span>Wrap text</span>
+              <span>
+                <button
+                  v-for="w in [['', 'off'], ['left', 'left'], ['right', 'right']]"
+                  :key="w[0]"
+                  class="sc-media-gear__btn"
+                  :class="{ 'is-active': wrap === w[0] }"
+                  @mousedown.prevent="setWrap(w[0])"
+                >{{ w[1] }}</button>
               </span>
             </div>
             <label v-if="resizable" class="sc-media-gear__row">
@@ -108,6 +120,10 @@ const videoOpts =
 const { inSlide } = useSlideFit();
 const fit = computed(() => inSlide && !props.block.data.width && (props.kind === 'image' || props.kind === 'video'));
 const frameStyle = computed(() => (props.block.data.width ? { width: `${props.block.data.width}px` } : {}));
+// Alignment/wrap live on props (block-level, shared with the handle menu).
+// Fall back to the legacy data.align so older documents still align.
+const align = computed(() => (props.block.props && props.block.props.align) || props.block.data.align || 'left');
+const wrap = computed(() => (props.block.props && props.block.props.wrap) || '');
 
 function fitToSlide() {
   props.block.data.width = null; // clear explicit size → CSS contains it in the slide
@@ -130,7 +146,8 @@ function setUrl(value) {
   changed();
 }
 function setCaption(e) { props.block.data.caption = e.target.value; ctx.markChanged(); }
-function setAlign(a) { props.block.data.align = a; ctx.emitEvent('media:configured', { id: props.block.id, align: a }); changed(); }
+function setAlign(a) { ctx.setProps(props.block.id, { align: a }); ctx.emitEvent('media:configured', { id: props.block.id, align: a }); }
+function setWrap(w) { ctx.setProps(props.block.id, { wrap: w }); ctx.emitEvent('media:configured', { id: props.block.id, wrap: w }); }
 function setWidth(v) {
   const w = Number(v);
   props.block.data.width = w > 0 ? w : null;

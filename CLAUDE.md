@@ -111,7 +111,11 @@ via `adapters.resolveDocumentUrl` or a built-in default; see `core/documents.js`
 Rich-HTML paste is imported to structured blocks via `core/html-import.js`.
 `button` (`data.label`/`url`/`target`/`action`/`variant`/`textColor`/`bgColor`;
 `action: 'link'` navigates, `'event'` emits `button-clicked` for the host),
-`accordion` (container: `data.segments` title + collapsible children, `props.collapsed`).
+`accordion` (container of `accordion-item` blocks; each item = `data.segments`
+title + collapsible children + `props.collapsed`; `accordion-item` is
+`slashHidden`). Block layout is `props.align` ('left'|'center'|'right', applied
+content-aware in BlockView) and `props.wrap` ('left'|'right' → float); set via
+`ctx.setProps(id, patch)` from the handle menu or a block's gear.
 
 ## Block Registry Contract
 

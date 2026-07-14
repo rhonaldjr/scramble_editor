@@ -239,15 +239,14 @@ test('button + accordion exporters', async () => {
   expect(toMarkdown({ blocks: [evt] }).trim()).toBe('**Run**');
   expect(toHTML({ blocks: [evt] })).toContain('<button class="sc-button sc-button--outline" type="button" style="background:transparent;border-color:#0f9d58;color:#0f9d58">Run</button>');
 
-  const acc = {
-    id: 'ac', type: 'accordion', data: { segments: [{ text: 'FAQ', marks: [] }] }, props: {}, children: [
-      { id: 'c1', type: 'paragraph', data: { segments: [{ text: 'Answer', marks: [] }] }, props: {}, children: [] },
-    ],
-  };
-  expect(toHTML({ blocks: [acc] })).toBe('<details class="sc-accordion" open><summary>FAQ</summary><p>Answer</p></details>');
-  const collapsed = { ...acc, props: { collapsed: true } };
-  expect(toHTML({ blocks: [collapsed] })).toContain('<details class="sc-accordion"><summary>');
-  expect(toMarkdown({ blocks: [acc] }).trim()).toBe('**FAQ**\n  Answer');
+  const item = (title, body, collapsed) => ({
+    id: `it-${title}`, type: 'accordion-item', data: { segments: [{ text: title, marks: [] }] }, props: collapsed ? { collapsed: true } : {},
+    children: [{ id: `b-${title}`, type: 'paragraph', data: { segments: [{ text: body, marks: [] }] }, props: {}, children: [] }],
+  });
+  const acc = { id: 'ac', type: 'accordion', data: {}, props: {}, children: [item('FAQ', 'Answer', false), item('More', 'Second', true)] };
+  const accHTML = toHTML({ blocks: [acc] });
+  expect(accHTML).toBe('<div class="sc-accordion"><details class="sc-accordion-item" open><summary>FAQ</summary><p>Answer</p></details><details class="sc-accordion-item"><summary>More</summary><p>Second</p></details></div>');
+  expect(toMarkdown({ blocks: [acc] }).trim()).toBe('**FAQ**\n  Answer\n\n**More**\n  Second');
 });
 
 test('columns + page-link export (via registered built-ins)', async () => {

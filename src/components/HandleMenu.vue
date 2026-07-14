@@ -17,6 +17,19 @@
         <span>Background color</span><span class="sc-menu__arrow">›</span>
       </div>
       <div class="sc-menu__item" @mousedown.prevent="run(setBackgroundImage)">Background image…</div>
+      <div class="sc-menu__item sc-menu__item--static">
+        <span>Align</span>
+        <span class="sc-menu__aligns">
+          <button
+            v-for="a in ['left', 'center', 'right']"
+            :key="a"
+            class="sc-menu__alignbtn"
+            :class="{ 'is-active': currentAlign === a }"
+            :title="`Align ${a}`"
+            @mousedown.prevent="run(() => ctx.setProps(id, { align: a }))"
+          >{{ ALIGN_ICON[a] }}</button>
+        </span>
+      </div>
       <div class="sc-menu__item sc-menu__item--danger" @mousedown.prevent="run(() => ctx.removeBlock(id))">Delete</div>
     </template>
 
@@ -59,6 +72,8 @@ import { COLOR_TOKENS, TEXT_COLORS, BG_COLORS } from '../core/colors.js';
 const ctx = useEditor();
 const panel = ref('main');
 const menuEl = ref(null);
+const ALIGN_ICON = { left: '⇤', center: '↔', right: '⇥' };
+const currentAlign = computed(() => (current.value && current.value.block.props && current.value.block.props.align) || 'left');
 
 const id = computed(() => ctx.handle.id);
 const style = computed(() => ({ position: 'fixed', left: `${ctx.handle.x}px`, top: `${ctx.handle.y}px` }));

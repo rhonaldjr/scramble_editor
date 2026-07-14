@@ -1,5 +1,5 @@
 <template>
-  <div class="sc-button-wrap" :class="`sc-button-wrap--${block.data.align || 'left'}`">
+  <div class="sc-button-wrap">
     <button
       type="button"
       class="sc-button"
@@ -63,6 +63,18 @@
           <span>Text color</span>
           <GearColor :model-value="block.data.textColor || ''" @update:model-value="set('textColor', $event)" />
         </label>
+        <div class="sc-media-gear__row">
+          <span>Align</span>
+          <span>
+            <button v-for="a in ['left', 'center', 'right']" :key="a" class="sc-media-gear__btn" :class="{ 'is-active': align === a }" @mousedown.prevent="ctx.setProps(block.id, { align: a })">{{ a }}</button>
+          </span>
+        </div>
+        <div class="sc-media-gear__row">
+          <span>Wrap text</span>
+          <span>
+            <button v-for="w in [['', 'off'], ['left', 'left'], ['right', 'right']]" :key="w[0]" class="sc-media-gear__btn" :class="{ 'is-active': wrap === w[0] }" @mousedown.prevent="ctx.setProps(block.id, { wrap: w[0] })">{{ w[1] }}</button>
+          </span>
+        </div>
       </div>
     </template>
   </div>
@@ -77,6 +89,8 @@ const props = defineProps({ block: { type: Object, required: true } });
 const ctx = useEditor();
 const readonly = computed(() => ctx.readonly.value);
 const showGear = ref(false);
+const align = computed(() => (props.block.props && props.block.props.align) || 'left');
+const wrap = computed(() => (props.block.props && props.block.props.wrap) || '');
 
 const buttonStyle = computed(() => {
   const { variant, textColor, bgColor } = props.block.data;

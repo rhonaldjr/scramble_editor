@@ -61,6 +61,18 @@
             <span>Height</span>
             <input type="number" min="160" step="10" :value="block.data.height || 480" @change="setDim('height', $event.target.value)" />
           </label>
+          <div class="sc-media-gear__row">
+            <span>Align</span>
+            <span>
+              <button v-for="a in ['left', 'center', 'right']" :key="a" class="sc-media-gear__btn" :class="{ 'is-active': align === a }" @mousedown.prevent="ctx.setProps(block.id, { align: a })">{{ a }}</button>
+            </span>
+          </div>
+          <div class="sc-media-gear__row">
+            <span>Wrap text</span>
+            <span>
+              <button v-for="w in [['', 'off'], ['left', 'left'], ['right', 'right']]" :key="w[0]" class="sc-media-gear__btn" :class="{ 'is-active': wrap === w[0] }" @mousedown.prevent="ctx.setProps(block.id, { wrap: w[0] })">{{ w[1] }}</button>
+            </span>
+          </div>
           <div v-if="inSlide" class="sc-media-gear__row">
             <span>Slide</span>
             <button class="sc-media-gear__btn" :class="{ 'is-active': fit }" @mousedown.prevent="fitToSlide">Fit to slide</button>
@@ -110,6 +122,8 @@ const label = computed(() => docTypeLabel(docType.value));
 const icon = computed(() => docTypeIcon(docType.value));
 const { inSlide } = useSlideFit();
 const fit = computed(() => inSlide && !props.block.data.width);
+const align = computed(() => (props.block.props && props.block.props.align) || 'left');
+const wrap = computed(() => (props.block.props && props.block.props.wrap) || '');
 const frameStyle = computed(() => {
   if (fit.value) return {}; // slide CSS sizes it to contain
   return {

@@ -221,8 +221,13 @@ A block **type** is a Vue component **plus** a registry entry (`create`,
 > banner, divider, code, image/video/audio/file, embed, bookmark, **web page**,
 > **document**, table, table-of-contents, columns, page-link, **slide** /
 > **slides (presentation)**, **button** (hyperlink or host-handled action, with
-> configurable colors/style), **accordion** (collapsible, editable title + body)
-> — plus your own via [`registerBlock`](#building-extensions-custom-blocks).
+> configurable colors/style), **accordion** (a group of collapsible items — add
+> more with "+ Add accordion item") — plus your own via
+> [`registerBlock`](#building-extensions-custom-blocks).
+>
+> Blocks can be **aligned** left / center / right (block handle menu, or the ⚙
+> gear on media/document/button), and **image / document / button** blocks can
+> **wrap text** around them (float left/right) from their gear.
 
 ### Segments & marks
 

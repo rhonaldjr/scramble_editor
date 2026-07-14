@@ -29,7 +29,8 @@ export function mediaHTML(b, kind) {
   const style = b.data.width ? ` style="width:${Number(b.data.width)}px"` : '';
   if (kind === 'image') {
     const fc = cap ? `<figcaption>${esc(cap)}</figcaption>` : '';
-    return `<figure class="sc-media--align-${b.data.align || 'left'}"><img src="${url}" alt="${escAttr(cap)}"${style}>${fc}</figure>`;
+    const align = (b.props && b.props.align) || b.data.align || 'left';
+    return `<figure class="sc-media--align-${align}"><img src="${url}" alt="${escAttr(cap)}"${style}>${fc}</figure>`;
   }
   if (kind === 'video') {
     const o = b.data.options || {};
@@ -124,14 +125,21 @@ export function buttonHTML(b) {
   return `<button class="${cls}" type="button"${styleAttr}>${label}</button>`;
 }
 
+// Accordion is a group of accordion-item blocks (each a <details>).
 export function accordionMarkdown(b, h) {
+  return (b.children || []).map((item) => accordionItemMarkdown(item, h)).filter(Boolean).join('\n\n');
+}
+export function accordionHTML(b, h) {
+  return `<div class="sc-accordion">${h.renderChildrenRaw(b)}</div>`;
+}
+export function accordionItemMarkdown(b, h) {
   const line = `**${h.renderSegments(b.data.segments)}**`;
   const kids = h.renderChildren(b);
   return kids ? `${line}\n${kids}` : line;
 }
-export function accordionHTML(b, h) {
+export function accordionItemHTML(b, h) {
   const open = b.props && b.props.collapsed ? '' : ' open';
-  return `<details class="sc-accordion"${open}><summary>${h.renderSegments(b.data.segments)}</summary>${h.renderChildrenRaw(b)}</details>`;
+  return `<details class="sc-accordion-item"${open}><summary>${h.renderSegments(b.data.segments)}</summary>${h.renderChildrenRaw(b)}</details>`;
 }
 
 export function bookmarkMarkdown(b) {

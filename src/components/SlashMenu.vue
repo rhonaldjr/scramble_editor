@@ -31,7 +31,7 @@ const items = computed(() => {
   const allowed = ctx.config.value && ctx.config.value.blocks ? new Set(ctx.config.value.blocks) : null;
   const q = query.value.toLowerCase();
   return listBlocks().filter(
-    (b) => (!allowed || allowed.has(b.type)) && ((b.label || '').toLowerCase().includes(q) || b.type.includes(q)),
+    (b) => !b.slashHidden && (!allowed || allowed.has(b.type)) && ((b.label || '').toLowerCase().includes(q) || b.type.includes(q)),
   );
 });
 

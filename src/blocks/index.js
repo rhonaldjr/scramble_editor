@@ -14,6 +14,7 @@ import SlideBlock from './SlideBlock.vue';
 import SlidesBlock from './SlidesBlock.vue';
 import ButtonBlock from './ButtonBlock.vue';
 import AccordionBlock from './AccordionBlock.vue';
+import AccordionItemBlock from './AccordionItemBlock.vue';
 import TableBlock from './TableBlock.vue';
 import TocBlock from './TocBlock.vue';
 import Columns from './Columns.vue';
@@ -25,7 +26,7 @@ import {
   esc, mediaMarkdown, mediaHTML, embedMarkdown, embedHTML, bookmarkMarkdown, bookmarkHTML,
   webpageMarkdown, webpageHTML, documentMarkdown, documentHTML,
   slideMarkdown, slideHTML, slidesMarkdown, slidesHTML,
-  buttonMarkdown, buttonHTML, accordionMarkdown, accordionHTML,
+  buttonMarkdown, buttonHTML, accordionMarkdown, accordionHTML, accordionItemMarkdown, accordionItemHTML,
   tableMarkdown, tableHTML, tocMarkdown, tocHTML, pageLinkMarkdown, pageLinkHTML,
 } from '../core/block-exporters.js';
 
@@ -223,9 +224,20 @@ export function registerBuiltins() {
   registerBlock({
     type: 'accordion', label: 'Accordion', icon: '🪗', group: null, container: true,
     component: AccordionBlock,
+    create: () => ({}),
+    initChildren: (make) => {
+      const item = make('accordion-item');
+      item.children = [make('paragraph')];
+      return [item];
+    },
+    toMarkdown: accordionMarkdown, toHTML: accordionHTML,
+  });
+  registerBlock({
+    type: 'accordion-item', label: 'Accordion item', icon: '▸', group: null, container: true, slashHidden: true,
+    component: AccordionItemBlock,
     create: (d = {}) => ({ segments: d.segments ? normalizeSegments(d.segments) : [createSegment(d.title || '')] }),
     initChildren: (make) => [make('paragraph')],
-    toMarkdown: accordionMarkdown, toHTML: accordionHTML,
+    toMarkdown: accordionItemMarkdown, toHTML: accordionItemHTML,
   });
 
   // Presentation: a slide (container) and a slides deck (container of slides).

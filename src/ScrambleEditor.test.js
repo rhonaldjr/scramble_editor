@@ -354,23 +354,48 @@ test('button block emits button-clicked with its config', async () => {
   expect(evt[0][0]).toMatchObject({ id: 'b', label: 'Run', action: 'event' });
 });
 
-test('accordion toggles its body and renders editable title + children', async () => {
-  const doc = {
+function accordionDoc() {
+  return {
     id: 'd', title: 't', style: {},
     blocks: [{
-      id: 'acc', type: 'accordion', data: { segments: [{ text: 'FAQ', marks: [] }] }, props: {}, children: [
-        { id: 'body', type: 'paragraph', data: { segments: [{ text: 'Answer', marks: [] }] }, props: {}, children: [] },
+      id: 'acc', type: 'accordion', data: {}, props: {}, children: [
+        { id: 'it1', type: 'accordion-item', data: { segments: [{ text: 'FAQ', marks: [] }] }, props: {}, children: [
+          { id: 'body', type: 'paragraph', data: { segments: [{ text: 'Answer', marks: [] }] }, props: {}, children: [] },
+        ] },
       ],
     }],
   };
-  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+}
+
+test('accordion item toggles its body and renders an editable title', async () => {
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: accordionDoc() } });
   await flushPromises();
-  expect(wrapper.find('.sc-accordion__title').attributes('contenteditable')).toBe('true');
+  expect(wrapper.find('.sc-accordion-item__title').attributes('contenteditable')).toBe('true');
   expect(wrapper.text()).toContain('Answer'); // body visible by default
-  // collapse
   await wrapper.find('.sc-accordion__chev').trigger('mousedown');
   await nextTick();
-  expect(wrapper.vm.getDocument().blocks[0].props.collapsed).toBe(true);
+  expect(wrapper.vm.getDocument().blocks[0].children[0].props.collapsed).toBe(true);
+});
+
+test('accordion "+ Add accordion item" appends a new item', async () => {
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: accordionDoc() } });
+  await flushPromises();
+  await wrapper.find('.sc-accordion__additem').trigger('mousedown');
+  await nextTick();
+  const items = wrapper.vm.getDocument().blocks[0].children;
+  expect(items.length).toBe(2);
+  expect(items[1].type).toBe('accordion-item');
+  expect(items[1].children[0].type).toBe('paragraph');
+});
+
+test('block alignment (props.align) applies a content-aware class', async () => {
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{ id: 'p', type: 'paragraph', data: { segments: [{ text: 'Hi', marks: [] }] }, props: { align: 'center' }, children: [] }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  expect(wrapper.find('.sc-block').classes()).toContain('sc-align-center');
 });
 
 test('readonly renders without contenteditable', async () => {

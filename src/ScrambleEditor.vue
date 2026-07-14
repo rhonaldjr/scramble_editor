@@ -447,6 +447,20 @@ function setColor(id, prop, token) {
   emitEvent('block:updated', { id });
   markChanged();
 }
+// Merge a patch into a block's props (e.g. { align: 'center' }, { wrap: 'left' }).
+// A null/'' value clears that prop.
+function setProps(id, patch = {}) {
+  const loc = model.findBlock(doc.blocks, id);
+  if (!loc) return;
+  loc.block.props = loc.block.props || {};
+  for (const key of Object.keys(patch)) {
+    const v = patch[key];
+    if (v == null || v === '') delete loc.block.props[key];
+    else loc.block.props[key] = v;
+  }
+  emitEvent('block:updated', { id });
+  markChanged();
+}
 // Set a block's background — `{ color?, image? }` (raw CSS color / image URL).
 // Pass null/'' to clear a field; omit a field to leave it unchanged.
 function setBackground(id, patch = {}) {
@@ -744,7 +758,7 @@ const ctx = {
   focusPrevious, focusNext, slashPick, pasteHTML,
   // V4
   turnInto: turnIntoBlock, turnIntoTargets, duplicate, moveUp: moveUpBlock, moveDown: moveDownBlock,
-  setColor, setBackground, copyLink, openHandleMenu, closeHandleMenu,
+  setColor, setBackground, setProps, copyLink, openHandleMenu, closeHandleMenu,
   // V5
   setStyle,
   // V6

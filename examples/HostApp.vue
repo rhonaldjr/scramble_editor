@@ -208,8 +208,13 @@ function defaultDoc() {
       { id: 'tip', type: 'paragraph', data: { segments: [{ text: 'Try pasting a rich web page here — headings, lists and tables keep their structure.', marks: [] }] }, props: {}, children: [] },
       { id: 'btn-evt', type: 'button', data: { label: 'Run host action', action: 'event', variant: 'filled', bgColor: '#e0218a', textColor: '#ffffff' }, props: {}, children: [] },
       { id: 'btn-link', type: 'button', data: { label: 'Open docs ↗', action: 'link', url: 'https://vuejs.org', target: '_blank', variant: 'outline', bgColor: '#0f9d58' }, props: {}, children: [] },
-      { id: 'acc', type: 'accordion', data: { segments: [{ text: 'What is Scramble?', marks: [] }] }, props: {}, children: [
-        { id: 'acc-b', type: 'paragraph', data: { segments: [{ text: 'A block editor delivered as one Vue 3 component. Click the chevron to collapse.', marks: [] }] }, props: {}, children: [] },
+      { id: 'acc', type: 'accordion', data: {}, props: {}, children: [
+        { id: 'acc-i1', type: 'accordion-item', data: { segments: [{ text: 'What is Scramble?', marks: [] }] }, props: {}, children: [
+          { id: 'acc-b1', type: 'paragraph', data: { segments: [{ text: 'A block editor delivered as one Vue 3 component. Click the chevron to collapse.', marks: [] }] }, props: {}, children: [] },
+        ] },
+        { id: 'acc-i2', type: 'accordion-item', data: { segments: [{ text: 'Can I add more items?', marks: [] }] }, props: { collapsed: true }, children: [
+          { id: 'acc-b2', type: 'paragraph', data: { segments: [{ text: 'Yes — use “+ Add accordion item” at the bottom of the accordion.', marks: [] }] }, props: {}, children: [] },
+        ] },
       ] },
       { id: 'ct', type: 'contact', data: { contact: null }, props: {}, children: [] },
       { id: 'w', type: 'webpage', data: { url: 'https://example.com', width: null, height: 360 }, props: {}, children: [] },
