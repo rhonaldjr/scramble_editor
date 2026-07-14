@@ -45,6 +45,41 @@ test('parses tables into cell-segment rows and images into image blocks', () => 
   expect(image.data).toEqual({ url: 'p.png', caption: 'c' });
 });
 
+test('imports Word/Office paste: heading styles, mso-list items, inline-style marks', () => {
+  const word = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office">
+    <head><style><!-- p.MsoNormal{margin:0} --></style></head>
+    <body><div class=WordSection1>
+      <!--[if gte mso 9]><xml><o:DocumentProperties/></xml><![endif]-->
+      <p class=MsoTitle>Report<o:p></o:p></p>
+      <p class=MsoHeading2>Section<o:p></o:p></p>
+      <p class=MsoNormal>Has <b>bold</b> and <span style='font-style:italic'>italic</span>.</p>
+      <p class=MsoListParagraphCxSpFirst style='mso-list:l0 level1 lfo1'>
+        <![if !supportLists]><span style='mso-list:Ignore'>1.<span>&nbsp;</span></span><![endif]>Step one</p>
+      <p class=MsoListParagraph style='mso-list:l1 level1 lfo2'>
+        <![if !supportLists]><span style='mso-list:Ignore'>&middot;<span>&nbsp;</span></span><![endif]>A bullet</p>
+      <p class=MsoNormal><o:p>&nbsp;</o:p></p>
+    </div></body></html>`;
+  const blocks = htmlToBlocks(word);
+  expect(blocks.map((b) => b.type)).toEqual([
+    'heading-1', 'heading-2', 'paragraph', 'numbered-list', 'bulleted-list',
+  ]);
+  // MSO cruft (style/xml/o:p) dropped; bullet glyph stripped from the list text
+  expect(blocks[3].data.segments.map((s) => s.text).join('')).toBe('Step one');
+  expect(blocks[4].data.segments.map((s) => s.text).join('')).toBe('A bullet');
+  // bold from <b>, italic from inline style
+  const para = blocks[2].data.segments;
+  expect(para.find((s) => s.text === 'bold').marks).toContain('bold');
+  expect(para.find((s) => s.text === 'italic').marks).toContain('italic');
+});
+
+test('reads bold/underline/strike from inline styles (Google Docs style spans)', () => {
+  const html = '<p><span style="font-weight:700">a</span><span style="text-decoration:line-through">b</span></p>';
+  const [para] = htmlToBlocks(html);
+  expect(para.data.segments.find((s) => s.text === 'a').marks).toContain('bold');
+  expect(para.data.segments.find((s) => s.text === 'b').marks).toContain('strikethrough');
+});
+
 test('textToBlocks splits plain text on newlines', () => {
   expect(textToBlocks('a\nb').map((b) => b.data.segments[0].text)).toEqual(['a', 'b']);
 });

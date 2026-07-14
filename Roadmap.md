@@ -169,6 +169,26 @@ package.json: @vue/test-utils + jsdom. Component tests use `// @vitest-environme
 jsdom`. -->
 
 
+## Phase V13 — Rich Paste, Inline Color, Fonts, Web Page Block
+
+Post-V12 enhancements. Import fidelity + inline styling + a live-URL block.
+
+- [x] Inline text color / highlight on a selection (palette tokens; HTML+Markdown export) — `setSegmentColor`, InlineToolbar palette
+- [x] Custom fonts interface (`fonts` prop: `{ id, label, family, url? }` → auto `<link>` + page-style picker) + example
+- [x] Web page block: live iframe preview of a URL, free width/height resize, URL via ⚙ gear (`webpage` type)
+- [x] Structured HTML paste: rich web-page HTML → real blocks (headings/lists/quotes/code/tables/images), not one flat paragraph — `core/html-import.js`
+- [x] Backspace in an empty nested block outdents toward the parent before merging/removing
+- [x] Paste from Word / Office / Google Docs, retaining format (mostly): strip Word `mso-`/conditional-comment cruft, map heading styles, reconstruct `mso-list` paragraphs into list blocks, read bold/italic/underline/strike from inline styles
+- [ ] Verify (browser): copy a formatted Word doc and paste — headings, lists, bold/italic survive
+
+<!-- Core: src/core/html-import.js (htmlToBlocks/nodeToBlocks/textToBlocks, Office
+normalization). ScrambleEditor.pasteHTML mutation + useEditableText onPaste.
+Blocks: WebPageBlock.vue + webpage registry entry + block-exporters webpage*.
+segments.js setSegmentColor + colorStyle. Fonts wired via ScrambleEditor `fonts`
+prop + ctx.fonts + PageStyle options. Example: data-URL upload (survives reload),
+custom fonts, webpage block. -->
+
+
 ## Manual Test Checklist (after each phase, on Node 18+)
 
 1. `npm install` then `npm run dev` starts with no console errors

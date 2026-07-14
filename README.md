@@ -183,6 +183,12 @@ become their own block rather than one flattened paragraph. Structural marks
 (bold/italic/underline/strike/code) and links are kept; stray inline colors from
 the source are dropped. See [src/core/html-import.js](src/core/html-import.js).
 
+Pasting from **Word / Office / Google Docs** works too: the importer strips MSO
+conditional-comment / `<style>` / `<o:p>` cruft, maps Word heading styles
+(`MsoTitle`, `MsoHeading1…6`) to headings, rebuilds `mso-list` paragraphs into
+list blocks (dropping the baked-in bullet), and reads bold/italic/underline/
+strike from inline `style` attributes as well as tags.
+
 ## Status
 
 Feature-complete against the reference implementation: blocks above, Turn Into +

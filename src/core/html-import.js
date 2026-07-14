@@ -1,8 +1,14 @@
-// HTML → block descriptors. Pasting a rich web page should become a *structured*
-// set of blocks (headings, paragraphs, lists, quotes, code, tables, images) —
-// not one flattened paragraph. Framework-free: uses only DOM APIs (DOMParser,
-// element traversal), no Vue. Returns `{ type, data }` descriptors that the
-// editor turns into real blocks via `createBlock`.
+// HTML → block descriptors. Pasting a rich web page (or a Word / Google Docs /
+// Outlook document) should become a *structured* set of blocks (headings,
+// paragraphs, lists, quotes, code, tables, images) — not one flattened
+// paragraph. Framework-free: uses only DOM APIs (DOMParser, element traversal),
+// no Vue. Returns `{ type, data }` descriptors that the editor turns into real
+// blocks via `createBlock`.
+//
+// Office/Word paste is messy: MSO conditional comments, `<style>`/`<xml>`
+// blobs, namespaced `<o:p>` tags, heading/list *styles* instead of semantic
+// tags, and list items rendered as `<p style="mso-list:…">` with the bullet
+// baked into a `mso-list:Ignore` span. We normalize all of that here.
 //
 // Note: inline *color/background* styling from arbitrary source HTML is
 // intentionally dropped — only structural marks (bold/italic/underline/strike/
@@ -16,6 +22,47 @@ const TAG_MARKS = {
 };
 
 const HEADING = { H1: 'heading-1', H2: 'heading-2', H3: 'heading-3', H4: 'heading-3', H5: 'heading-3', H6: 'heading-3' };
+
+// Word/Docs heading (and title) paragraph styles → heading blocks.
+const WORD_HEADING = {
+  MsoTitle: 'heading-1', MsoHeading1: 'heading-1', MsoHeading2: 'heading-2',
+  MsoHeading3: 'heading-3', MsoHeading4: 'heading-3', MsoHeading5: 'heading-3', MsoHeading6: 'heading-3',
+};
+
+// Derive marks from an inline `style` attribute (Word/Docs express bold/italic/
+// underline/strike as CSS, not just <b>/<i>/<u>/<s>).
+function addStyleMarks(marks, style) {
+  if (!style) return marks;
+  let out = marks;
+  const add = (m) => { if (!out.includes(m)) out = [...out, m]; };
+  if (/font-weight\s*:\s*(?:bold|bolder|[6-9]00)\b/i.test(style)) add('bold');
+  if (/font-style\s*:\s*italic\b/i.test(style)) add('italic');
+  if (/text-decoration[^;]*\bunderline\b/i.test(style)) add('underline');
+  if (/text-decoration[^;]*\bline-through\b/i.test(style)) add('strikethrough');
+  return out;
+}
+
+function wordHeadingType(el) {
+  const cls = el.getAttribute ? el.getAttribute('class') || '' : '';
+  for (const key of Object.keys(WORD_HEADING)) {
+    if (new RegExp(`\\b${key}\\b`, 'i').test(cls)) return WORD_HEADING[key];
+  }
+  return null;
+}
+
+function isWordListParagraph(el) {
+  if (!el.getAttribute) return false;
+  const style = el.getAttribute('style') || '';
+  const cls = el.getAttribute('class') || '';
+  return /mso-list\s*:/i.test(style) || /MsoListParagraph/i.test(cls);
+}
+
+// A Word list item is ordered when its baked-in bullet glyph is a number.
+function isWordListOrdered(el) {
+  const marker = el.querySelector ? el.querySelector('span[style*="mso-list"]') : null;
+  const glyph = (marker ? marker.textContent : '').trim();
+  return /\d/.test(glyph);
+}
 
 // Elements that flow inline (accumulate into the current paragraph). Anything
 // not listed here and not specially handled is treated as a block container.
@@ -51,7 +98,13 @@ function inlineSegments(node) {
       } else if (child.nodeType === 1) {
         const tag = child.tagName;
         if (tag === 'BR') { segments.push({ text: ' ', marks: [...marks] }); return; }
-        const nextMarks = TAG_MARKS[tag] ? [...marks, TAG_MARKS[tag]] : marks;
+        // Office namespaced tags (o:p, v:*, w:*) carry no readable content.
+        if (tag.includes(':')) return;
+        const style = child.getAttribute('style') || '';
+        // Word bakes the list bullet/number into a `mso-list:Ignore` span — drop it.
+        if (/mso-list\s*:\s*ignore/i.test(style)) return;
+        let nextMarks = addStyleMarks(marks, style);
+        if (TAG_MARKS[tag] && !nextMarks.includes(TAG_MARKS[tag])) nextMarks = [...nextMarks, TAG_MARKS[tag]];
         const nextLink = tag === 'A' ? (child.getAttribute('href') || link) : link;
         walk(child, nextMarks, nextLink);
       }
@@ -105,9 +158,19 @@ function handleList(el, blocks) {
 
 function handleBlockElement(el, blocks) {
   const tag = el.tagName;
+  if (tag.includes(':')) return; // Office namespaced container (o:p, v:*)
   if (HEADING[tag]) { pushInline(blocks, HEADING[tag], el); return; }
   switch (tag) {
-    case 'P': pushInline(blocks, 'paragraph', el); return;
+    case 'P': {
+      const wh = wordHeadingType(el);
+      if (wh) { pushInline(blocks, wh, el); return; }
+      if (isWordListParagraph(el)) {
+        pushInline(blocks, isWordListOrdered(el) ? 'numbered-list' : 'bulleted-list', el);
+        return;
+      }
+      pushInline(blocks, 'paragraph', el);
+      return;
+    }
     case 'BLOCKQUOTE': pushInline(blocks, 'quote', el); return;
     case 'PRE': {
       const code = el.textContent.replace(/\n$/, '');
@@ -161,7 +224,7 @@ export function nodeToBlocks(root) {
 export function htmlToBlocks(html) {
   if (!html || typeof DOMParser === 'undefined') return [];
   const parsed = new DOMParser().parseFromString(html, 'text/html');
-  parsed.body.querySelectorAll('script,style,noscript,template').forEach((n) => n.remove());
+  parsed.body.querySelectorAll('script,style,noscript,template,xml,title,meta,link').forEach((n) => n.remove());
   return nodeToBlocks(parsed.body);
 }
 
