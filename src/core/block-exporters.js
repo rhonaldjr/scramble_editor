@@ -62,6 +62,27 @@ export function webpageHTML(b) {
   return `<iframe class="sc-webpage__frame" src="${escAttr(b.data.url)}" style="width:${w};height:${h};border:0" loading="lazy"></iframe>`;
 }
 
+function slideBgStyle(b) {
+  const p = b.props || {};
+  const parts = [];
+  if (p.backgroundColor) parts.push(`background:${p.backgroundColor}`);
+  if (p.backgroundImage) parts.push(`background-image:url('${escAttr(p.backgroundImage)}')`, 'background-size:cover', 'background-position:center');
+  return parts.join(';');
+}
+export function slideMarkdown(b, h) {
+  return h.renderChildrenRaw(b);
+}
+export function slideHTML(b, h) {
+  const style = slideBgStyle(b);
+  return `<section class="sc-slide"${style ? ` style="${style}"` : ''}>${h.renderChildrenRaw(b)}</section>`;
+}
+export function slidesMarkdown(b, h) {
+  return (b.children || []).map((s) => h.renderChildrenRaw(s)).filter(Boolean).join('\n\n---\n\n');
+}
+export function slidesHTML(b, h) {
+  return `<div class="sc-slides">${h.renderChildrenRaw(b)}</div>`;
+}
+
 export function documentMarkdown(b) {
   const url = b.data.url || '';
   return url ? `[${b.data.name || url}](${url})` : '';

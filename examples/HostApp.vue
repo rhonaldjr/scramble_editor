@@ -5,7 +5,9 @@
   It shows the responsibilities the host owns, all through the component's public
   interface (v-model, events, adapters, template-ref methods):
 
-    • Persistence  — load on mount + autosave to localStorage on @change.
+    • Persistence  — load on mount + autosave to IndexedDB on @change
+                     (IndexedDB, not localStorage: docs with embedded media blow
+                     past localStorage's ~5 MB quota and would fail to save).
     • Uploads      — an `upload` adapter (here: data URLs so media survives a
                      refresh; use your storage/CDN in a real app).
     • Documents    — a `resolveDocumentUrl` adapter resolves how the Document
@@ -106,7 +108,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { ScrambleEditor, registerBlock } from '../src/index.js';
 import ContactBlock from './ContactBlock.vue';
 
@@ -169,6 +171,12 @@ function defaultDoc() {
       { id: 'tip', type: 'paragraph', data: { segments: [{ text: 'Try pasting a rich web page here — headings, lists and tables keep their structure.', marks: [] }] }, props: {}, children: [] },
       { id: 'ct', type: 'contact', data: { contact: null }, props: {}, children: [] },
       { id: 'w', type: 'webpage', data: { url: 'https://example.com', width: null, height: 360 }, props: {}, children: [] },
+      { id: 'deck', type: 'slides', data: {}, props: {}, children: [
+        { id: 'sl1', type: 'slide', data: { aspect: '16x9' }, props: { backgroundColor: '#0b1e3b', color: null }, children: [
+          { id: 'sl1h', type: 'heading-1', data: { segments: [{ text: 'A slide deck, in-document', marks: [], color: 'default' }] }, props: {}, children: [] },
+          { id: 'sl1p', type: 'paragraph', data: { segments: [{ text: 'Drop images/video into slides, set a background, then press ▶ Present.', marks: [] }] }, props: {}, children: [] },
+        ] },
+      ] },
       { id: 'doc', type: 'document', data: { url: '', name: '', docType: '', width: null, height: 420 }, props: {}, children: [] },
       { id: 'i', type: 'image', data: { url: '', caption: '' }, props: {}, children: [] },
     ],
@@ -176,15 +184,65 @@ function defaultDoc() {
 }
 
 // --- persistence (host responsibility) ---
-function readStored() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+// IMPORTANT: we persist to **IndexedDB**, not localStorage. A document that
+// embeds media (data-URL images/video, or a docx preview) easily exceeds
+// localStorage's ~5 MB quota — `setItem` then throws `QuotaExceededError`, the
+// autosave silently fails, and a reload reverts to the last small save (so a
+// freshly pasted/formatted block "loses its formatting"). IndexedDB has no such
+// limit. A real backend (your API/DB) has the same requirement: store the whole
+// document, media included.
+const DB_NAME = 'scramble-demo';
+const STORE = 'docs';
+const DOC_KEY = 'host-demo';
+
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
 }
-const doc = ref(readStored() || defaultDoc());
+async function idbSet(value) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(JSON.parse(JSON.stringify(value)), DOC_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function idbGet() {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const rq = tx.objectStore(STORE).get(DOC_KEY);
+    rq.onsuccess = () => resolve(rq.result || null);
+    rq.onerror = () => reject(rq.error);
+  });
+}
+async function idbDel() {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(DOC_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+const doc = ref(defaultDoc());
+// One-time migration from the old localStorage store, then load from IndexedDB.
+onMounted(async () => {
+  try {
+    const legacy = localStorage.getItem(STORAGE_KEY);
+    if (legacy) { await idbSet(JSON.parse(legacy)); localStorage.removeItem(STORAGE_KEY); }
+    const stored = await idbGet();
+    if (stored) { doc.value = stored; log('loaded ← IndexedDB'); }
+  } catch (e) {
+    log(`load failed: ${e.message}`);
+  }
+});
 
 let saveTimer = null;
 function onChange(next) {
@@ -192,23 +250,29 @@ function onChange(next) {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => save(next), 600); // debounced autosave
 }
-function save(next) {
+async function save(next) {
   const d = next || (editor.value && editor.value.getDocument()) || doc.value;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
-  savedAt.value = new Date().toLocaleTimeString();
+  try {
+    await idbSet(d);
+    savedAt.value = new Date().toLocaleTimeString();
+    log('persisted → IndexedDB');
+  } catch (e) {
+    savedAt.value = null;
+    log(`save FAILED: ${e.message}`); // e.g. quota — surfaced instead of silently dropped
+  }
   broadcastDoc(d); // share with other tabs (collab demo)
   snapshot(d); // keep a version for the history panel
-  log('persisted → localStorage');
 }
-function reload() {
-  const stored = readStored();
-  if (stored) {
-    doc.value = stored; // push into the component via v-model
-    log('loaded ← localStorage');
+async function reload() {
+  try {
+    const stored = await idbGet();
+    if (stored) { doc.value = stored; log('loaded ← IndexedDB'); }
+  } catch (e) {
+    log(`load failed: ${e.message}`);
   }
 }
-function reset() {
-  localStorage.removeItem(STORAGE_KEY);
+async function reset() {
+  await idbDel();
   doc.value = defaultDoc();
   savedAt.value = null;
   log('reset');

@@ -187,6 +187,26 @@ test('table + toc exporters (via registered built-ins)', async () => {
   expect(toHTML({ blocks: [img] })).toContain('style="width:320px"');
 });
 
+test('slides/slide exporters render backgrounds + separate slides', async () => {
+  clearRegistry();
+  const { registerBuiltins } = await import('../blocks/index.js');
+  registerBuiltins();
+  const para = (t) => ({ id: `p-${t}`, type: 'paragraph', data: { segments: [{ text: t, marks: [] }] }, props: {}, children: [] });
+  const deck = {
+    id: 'deck', type: 'slides', data: {}, props: {}, children: [
+      { id: 's1', type: 'slide', data: { aspect: '16x9' }, props: { backgroundColor: '#0b1e3b' }, children: [para('One')] },
+      { id: 's2', type: 'slide', data: {}, props: { backgroundImage: 'http://x/bg.png' }, children: [para('Two')] },
+    ],
+  };
+  const html = toHTML({ blocks: [deck] });
+  expect(html).toContain('<div class="sc-slides">');
+  expect(html).toContain('<section class="sc-slide" style="background:#0b1e3b">');
+  expect(html).toContain("background-image:url('http://x/bg.png')");
+  expect(html).toContain('One');
+  // Markdown separates slides with a horizontal rule
+  expect(toMarkdown({ blocks: [deck] }).trim()).toBe('One\n\n---\n\nTwo');
+});
+
 test('columns + page-link export (via registered built-ins)', async () => {
   clearRegistry();
   const { registerBuiltins } = await import('../blocks/index.js');

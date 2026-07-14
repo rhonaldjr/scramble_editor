@@ -435,6 +435,17 @@ function setColor(id, prop, token) {
   emitEvent('block:updated', { id });
   markChanged();
 }
+// Set a block's background — `{ color?, image? }` (raw CSS color / image URL).
+// Pass null/'' to clear a field; omit a field to leave it unchanged.
+function setBackground(id, patch = {}) {
+  const loc = model.findBlock(doc.blocks, id);
+  if (!loc) return;
+  loc.block.props = loc.block.props || {};
+  if ('color' in patch) loc.block.props.backgroundColor = patch.color || null;
+  if ('image' in patch) loc.block.props.backgroundImage = patch.image || null;
+  emitEvent('block:updated', { id });
+  markChanged();
+}
 function copyLink(id) {
   const base = typeof location !== 'undefined' ? location.href.split('#')[0] : '';
   const url = `${base}#${id}`;
@@ -573,18 +584,35 @@ function slashPick(id, slashOffset, type) {
   } else if (isEmptySegments(remaining)) {
     loc.block.type = type;
     loc.block.data = def.create({});
+    if (def.initChildren) loc.block.children = def.initChildren(createBlock);
     const para = createBlock('paragraph');
     model.insertAfter(doc.blocks, id, para);
-    requestFocus(para.id, 0);
+    requestFocus(firstEditableId(loc.block.children) || para.id, 0);
     emitEvent('block:converted', { id, to: type });
   } else {
     const nb = createBlock(type);
+    if (def.initChildren) nb.children = def.initChildren(createBlock);
     model.insertAfter(doc.blocks, id, nb);
     if (def.editableText) requestFocus(nb.id, 0);
-    else { const para = createBlock('paragraph'); model.insertAfter(doc.blocks, nb.id, para); requestFocus(para.id, 0); }
+    else {
+      const inner = firstEditableId(nb.children);
+      if (inner) requestFocus(inner, 0);
+      else { const para = createBlock('paragraph'); model.insertAfter(doc.blocks, nb.id, para); requestFocus(para.id, 0); }
+    }
     emitEvent('block:created', { id: nb.id });
   }
   markChanged();
+}
+
+// First editable-text block id in a subtree (for focusing inside a container).
+function firstEditableId(blocks = []) {
+  for (const b of blocks) {
+    const d = getBlock(b.type);
+    if (d && d.editableText) return b.id;
+    const inner = firstEditableId(b.children || []);
+    if (inner) return inner;
+  }
+  return null;
 }
 
 // --- markdown shortcuts (typed at the start of a block) ---
@@ -704,7 +732,7 @@ const ctx = {
   focusPrevious, focusNext, slashPick, pasteHTML,
   // V4
   turnInto: turnIntoBlock, turnIntoTargets, duplicate, moveUp: moveUpBlock, moveDown: moveDownBlock,
-  setColor, copyLink, openHandleMenu, closeHandleMenu,
+  setColor, setBackground, copyLink, openHandleMenu, closeHandleMenu,
   // V5
   setStyle,
   // V6

@@ -81,10 +81,15 @@ const rowStyle = computed(() => {
   const p = props.block.props || {};
   const s = {};
   if (TEXT_COLORS[p.color]) s.color = TEXT_COLORS[p.color];
-  if (BG_COLORS[p.background]) {
-    s.background = BG_COLORS[p.background];
+  // Background: a palette token, or any raw CSS color, and/or an image URL.
+  const bg = BG_COLORS[p.background] || p.backgroundColor;
+  if (bg) { s.background = bg; s.borderRadius = '4px'; s.padding = '2px 6px'; }
+  if (p.backgroundImage) {
+    s.backgroundImage = `url("${p.backgroundImage}")`;
+    s.backgroundSize = 'cover';
+    s.backgroundPosition = 'center';
     s.borderRadius = '4px';
-    s.padding = '0 6px';
+    s.padding = '2px 6px';
   }
   return s;
 });

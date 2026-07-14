@@ -16,6 +16,7 @@
       <div class="sc-menu__item" @mousedown.prevent="panel = 'bg'">
         <span>Background color</span><span class="sc-menu__arrow">›</span>
       </div>
+      <div class="sc-menu__item" @mousedown.prevent="run(setBackgroundImage)">Background image…</div>
       <div class="sc-menu__item sc-menu__item--danger" @mousedown.prevent="run(() => ctx.removeBlock(id))">Delete</div>
     </template>
 
@@ -83,6 +84,13 @@ function labelOf(tok) {
 
 function comment() {
   ctx.openComments(id.value, ctx.handle.x, ctx.handle.y);
+}
+function setBackgroundImage() {
+  const b = current.value && current.value.block;
+  const currentUrl = (b && b.props && b.props.backgroundImage) || '';
+  const url = window.prompt('Background image URL (empty to clear)', currentUrl);
+  if (url === null) return;
+  ctx.setBackground(id.value, { image: url.trim() });
 }
 function close() {
   ctx.closeHandleMenu();

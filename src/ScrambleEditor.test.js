@@ -145,6 +145,50 @@ test('document block shows a fallback when an office file has no viewable URL', 
   expect(wrapper.find('.sc-document__fallback').exists()).toBe(true);
 });
 
+test('slides deck: add slide, set background, and enter present mode', async () => {
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{
+      id: 'deck', type: 'slides', data: {}, props: {}, children: [
+        { id: 's1', type: 'slide', data: { aspect: '16x9' }, props: {}, children: [
+          { id: 'p1', type: 'paragraph', data: { segments: [{ text: 'Hi', marks: [] }] }, props: {}, children: [] },
+        ] },
+      ],
+    }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+
+  // Add a slide via the deck toolbar
+  await wrapper.find('.sc-slides__btn').trigger('mousedown');
+  await nextTick();
+  expect(wrapper.vm.getDocument().blocks[0].children.length).toBe(2);
+
+  // Enter present mode
+  await wrapper.find('.sc-slides__btn--go').trigger('mousedown');
+  await nextTick();
+  expect(wrapper.find('.sc-present').exists()).toBe(true);
+  expect(wrapper.find('.sc-present__count').text()).toContain('1 /');
+});
+
+test('slide/deck export to HTML with a background through the editor', async () => {
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{
+      id: 'deck', type: 'slides', data: {}, props: {}, children: [
+        { id: 's1', type: 'slide', data: {}, props: { backgroundColor: 'navy' }, children: [
+          { id: 'p1', type: 'paragraph', data: { segments: [{ text: 'Slide one', marks: [] }] }, props: {}, children: [] },
+        ] },
+      ],
+    }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  const html = wrapper.vm.getHTML();
+  expect(html).toContain('<section class="sc-slide" style="background:navy">');
+  expect(html).toContain('Slide one');
+});
+
 test('readonly renders without contenteditable', async () => {
   const wrapper = mount(ScrambleEditor, { props: { modelValue: sampleDoc(), readonly: true } });
   await flushPromises();

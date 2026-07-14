@@ -47,6 +47,7 @@ listen to typed events, and wire your **own backend** through adapter functions.
   - [10. Comments](#10-comments)
   - [11. History / version restore](#11-history--version-restore)
   - [12. Live collaboration (presence + sync)](#12-live-collaboration-presence--sync)
+  - [13. Presentations & block backgrounds](#13-presentations--block-backgrounds)
 - [Building extensions (custom blocks)](#building-extensions-custom-blocks)
   - [Anatomy of a block](#anatomy-of-a-block)
   - [A block that renders dynamic data](#a-block-that-renders-dynamic-data)
@@ -217,7 +218,8 @@ A block **type** is a Vue component **plus** a registry entry (`create`,
 
 > paragraph, heading 1–3, quote, bulleted/numbered/checklist, toggle, callout,
 > banner, divider, code, image/video/audio/file, embed, bookmark, **web page**,
-> **document**, table, table-of-contents, columns, page-link — plus your own via
+> **document**, table, table-of-contents, columns, page-link, **slide** /
+> **slides (presentation)** — plus your own via
 > [`registerBlock`](#building-extensions-custom-blocks).
 
 ### Segments & marks
@@ -561,6 +563,28 @@ For conflict-free multi-writer editing, feed a CRDT (e.g. Yjs) from `@change` an
 push merged state back through `v-model`. A working two-tab
 `BroadcastChannel` demo lives in
 [`examples/HostApp.vue`](examples/HostApp.vue).
+
+### 13. Presentations & block backgrounds
+
+Insert a **Slides (presentation)** block (`/slides`) to build a slide deck inside
+a document. Each **slide** is a container that holds any blocks (text, images,
+video, embeds…), has a background **color or image** and an aspect ratio (16:9 /
+4:3 / auto), and the deck's **▶ Present** button opens a full-screen slideshow
+(← / → to navigate, **Esc** to exit); **+ Add slide** appends one.
+
+Any block can have a background too — via the block handle menu (**Background
+color** / **Background image…**) or programmatically:
+
+```js
+// inside a custom block, or via the exposed context
+ctx.setBackground(blockId, { color: '#0b1e3b' });        // any CSS color
+ctx.setBackground(blockId, { image: 'https://…/bg.jpg' }); // cover image
+ctx.setBackground(blockId, { color: '', image: '' });     // clear
+```
+
+Backgrounds live on `block.props` (`backgroundColor` / `backgroundImage`), so
+they're plain data — they persist and export (slides become `<section>`s with
+inline backgrounds; Markdown separates slides with `---`).
 
 ---
 

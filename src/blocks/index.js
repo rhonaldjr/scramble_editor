@@ -10,6 +10,8 @@ import EmbedBlock from './EmbedBlock.vue';
 import BookmarkBlock from './BookmarkBlock.vue';
 import WebPageBlock from './WebPageBlock.vue';
 import DocumentBlock from './DocumentBlock.vue';
+import SlideBlock from './SlideBlock.vue';
+import SlidesBlock from './SlidesBlock.vue';
 import TableBlock from './TableBlock.vue';
 import TocBlock from './TocBlock.vue';
 import Columns from './Columns.vue';
@@ -20,6 +22,7 @@ import { createSegment, normalizeSegments } from '../core/segments.js';
 import {
   esc, mediaMarkdown, mediaHTML, embedMarkdown, embedHTML, bookmarkMarkdown, bookmarkHTML,
   webpageMarkdown, webpageHTML, documentMarkdown, documentHTML,
+  slideMarkdown, slideHTML, slidesMarkdown, slidesHTML,
   tableMarkdown, tableHTML, tocMarkdown, tocHTML, pageLinkMarkdown, pageLinkHTML,
 } from '../core/block-exporters.js';
 
@@ -201,5 +204,25 @@ export function registerBuiltins() {
     type: 'page-link', label: 'Page link', icon: '📄', group: null,
     component: PageLinkBlock, create: (d = {}) => ({ docId: d.docId || '', title: d.title || '' }),
     toMarkdown: pageLinkMarkdown, toHTML: pageLinkHTML,
+  });
+
+  // Presentation: a slide (container) and a slides deck (container of slides).
+  registerBlock({
+    type: 'slide', label: 'Slide', icon: '🖼', group: null, container: true,
+    component: SlideBlock,
+    create: (d = {}) => ({ aspect: d.aspect || '16x9' }),
+    initChildren: (make) => [make('paragraph')],
+    toMarkdown: slideMarkdown, toHTML: slideHTML,
+  });
+  registerBlock({
+    type: 'slides', label: 'Slides (presentation)', icon: '🎞', group: null, container: true,
+    component: SlidesBlock,
+    create: () => ({}),
+    initChildren: (make) => {
+      const slide = make('slide');
+      slide.children = [make('paragraph')];
+      return [slide];
+    },
+    toMarkdown: slidesMarkdown, toHTML: slidesHTML,
   });
 }

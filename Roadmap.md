@@ -207,6 +207,25 @@ entry + block-exporters document*. ScrambleEditor emits document-added/configure
 Example: adapters.resolveDocumentUrl + event log. -->
 
 
+## Phase V15 — Presentation / Slides & Block Backgrounds
+
+Build slide-deck documents with multimedia, and give any block a background.
+
+- [x] Block backgrounds: `props.backgroundColor` (any CSS color) + `props.backgroundImage` (URL) applied in render; set via the block handle menu; `ctx.setBackground(id, patch)`
+- [x] `slide` block (container): a framed slide (16:9 / 4:3 / auto) with a background color/image, holding any blocks — text, images, video, embeds, etc.; ⚙ gear for background + aspect ratio
+- [x] `slides` deck (container): holds `slide` children; **▶ Present** enters a full-screen slideshow (←/→ to navigate, Esc to exit); **+ Add slide**
+- [x] `initChildren` registry hook so a slash-inserted container seeds its initial children (deck → one slide → a paragraph); focus the first editable descendant
+- [x] Exporters: slides/slide → HTML sections (backgrounds inline) and Markdown (`---`-separated); registered in the slash menu
+- [ ] Verify (browser): build a deck, drop media into slides, set backgrounds, present full-screen, export
+
+<!-- BlockView rowStyle reads props.backgroundColor/backgroundImage. HandleMenu
+gains a Background image item + custom color. ctx.setBackground. Blocks:
+SlideBlock.vue + SlidesBlock.vue (Present overlay). registry initChildren hook +
+slashPick seeding + focusFirstEditable. block-exporters slide*/slides*. Example
+gains a starter deck. -->
+
+
+
 ## Manual Test Checklist (after each phase, on Node 18+)
 
 1. `npm install` then `npm run dev` starts with no console errors

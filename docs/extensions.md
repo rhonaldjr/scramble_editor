@@ -71,7 +71,7 @@ The `ctx` from `useEditor()` provides:
 | `ctx.markChanged()` | Notify a change (emits `update:modelValue` + `change`). |
 | `ctx.emitEvent(name, detail)` | Dispatch a typed editor event. |
 | `ctx.isEnabled(feature)` | Feature-flag check. |
-| Mutations | `createBlock`, `splitBlock`, `mergeWithPrevious`, `indent`, `outdent`, `moveBlock`, `moveUp/moveDown`, `removeBlock`, `duplicate`, `turnInto`, `setColor`, `setStyle`, `toggleCollapsed`, `slashPick`, `requestFocus`. |
+| Mutations | `createBlock`, `splitBlock`, `mergeWithPrevious`, `indent`, `outdent`, `moveBlock`, `moveUp/moveDown`, `removeBlock`, `duplicate`, `turnInto`, `setColor`, `setBackground` (`{ color?, image? }`), `setStyle`, `toggleCollapsed`, `slashPick`, `requestFocus`. |
 
 ## Host interface (adapters) — the backend is yours
 

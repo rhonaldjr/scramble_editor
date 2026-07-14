@@ -96,7 +96,9 @@ examples/                   # host apps consuming the component (Gallery + Minim
 }
 ```
 
-Special blocks: `columns` (children are `column` blocks), `table`
+Special blocks: `columns` (children are `column` blocks), `slides` (a deck whose
+children are `slide` container blocks — background via `props.backgroundColor` /
+`props.backgroundImage`, Present mode overlay), `table`
 (`data.rows` = 2D cell-segment arrays), `toc` (renders from headings),
 `page-link` (`data.docId`), media/embed (`data.url` + host-provided metadata),
 `webpage` (`data.url` + `width`/`height` — live iframe preview), `document`
@@ -111,7 +113,8 @@ registerBlock({
   type, label, icon, group,        // group = Turn Into group ('text' | null)
   component,                       // Vue component (receives :block)
   componentProps?,                 // extra props (e.g. tag/marker)
-  editableText?, listMarker?, continuationType?, void?,
+  editableText?, listMarker?, continuationType?, void?, container?,
+  initChildren?(make),             // container blocks: seed children on slash-insert (make = createBlock)
   create(data) => blockData,
   toMarkdown(block, helpers) => string,   // helpers: renderSegments, renderChildren(Raw), doc
   toHTML(block, helpers) => string,
