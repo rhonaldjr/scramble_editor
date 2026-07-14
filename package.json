@@ -1,7 +1,7 @@
 {
   "name": "scramble-editor-vue",
   "version": "0.1.0",
-  "description": "Scramble — a Notion-style block editor as an exclusive Vue 3 component. Bring your own backend.",
+  "description": "Scramble — a block editor as an exclusive Vue 3 component. Bring your own backend.",
   "type": "module",
   "license": "MIT",
   "keywords": ["vue", "vue3", "editor", "block-editor", "rich-text", "wysiwyg", "notion"],

@@ -103,10 +103,12 @@ on your own channel (WebSocket, BroadcastChannel, WebRTC, …):
 `block-updated`, `block-deleted`, `block-moved`, `block-converted`,
 `block-duplicated`, `block-collapsed`, `block-link-copied`, `style-changed`,
 `slash-opened`, `slash-selected`, `shortcut-applied`, `media-uploaded`,
-`media-resized`, `media-configured`, `selection-blocks`, `page-link-open`,
-`cursor-changed`, `comment-added` (`{ blockId, text }`), `comment-resolved`
-(`{ id }`), `mention-inserted` (`{ id, contactId }`). A catch-all `event` carries
-`{ type, detail }`. Custom blocks may raise their own via `ctx.emitEvent`.
+`media-resized`, `media-configured`, `document-added`, `document-configured`,
+`selection-blocks`, `page-link-open`, `cursor-changed`, `comment-added`
+(`{ blockId, text }`), `comment-resolved` (`{ id }`), `mention-inserted`
+(`{ id, contactId }`), `word-count`, `fullscreen-changed`. A catch-all `event`
+carries `{ type, detail }`. Custom blocks may raise their own via
+`ctx.emitEvent`.
 
 ## Comments, mentions, history (interface only)
 

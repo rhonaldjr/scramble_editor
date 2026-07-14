@@ -83,6 +83,7 @@ const emit = defineEmits([
   'block-duplicated', 'block-link-copied', 'style-changed', 'block-collapsed',
   'slash-opened', 'slash-selected', 'shortcut-applied',
   'media-uploaded', 'media-resized', 'media-configured',
+  'document-added', 'document-configured',
   'selection-blocks', 'page-link-open', 'cursor-changed',
   'comment-added', 'comment-resolved', 'mention-inserted', 'word-count', 'fullscreen-changed',
 ]);
