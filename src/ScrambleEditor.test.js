@@ -388,6 +388,23 @@ test('accordion "+ Add accordion item" appends a new item', async () => {
   expect(items[1].children[0].type).toBe('paragraph');
 });
 
+test('columns render their column children (content is visible)', async () => {
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{
+      id: 'cols', type: 'columns', data: {}, props: {}, children: [
+        { id: 'c1', type: 'column', data: {}, props: {}, children: [{ id: 'p1', type: 'paragraph', data: { segments: [{ text: 'Left col', marks: [] }] }, props: {}, children: [] }] },
+        { id: 'c2', type: 'column', data: {}, props: {}, children: [{ id: 'p2', type: 'paragraph', data: { segments: [{ text: 'Right col', marks: [] }] }, props: {}, children: [] }] },
+      ],
+    }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  expect(wrapper.findAll('.sc-column').length).toBe(2);
+  expect(wrapper.text()).toContain('Left col');
+  expect(wrapper.text()).toContain('Right col');
+});
+
 test('block alignment (props.align) applies a content-aware class', async () => {
   const doc = {
     id: 'd', title: 't', style: {},

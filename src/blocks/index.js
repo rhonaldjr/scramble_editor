@@ -193,14 +193,19 @@ export function registerBuiltins() {
 
   // Layout: columns + column (container blocks render their own children)
   registerBlock({
-    type: 'column', label: 'Column', icon: '▯', group: null, container: true,
+    type: 'column', label: 'Column', icon: '▯', group: null, container: true, slashHidden: true,
     component: Column, create: () => ({}),
+    initChildren: (make) => [make('paragraph')],
     toMarkdown: (b, h) => h.renderChildrenRaw(b),
     toHTML: (b, h) => `<div class="sc-column">${h.renderChildrenRaw(b)}</div>`,
   });
   registerBlock({
     type: 'columns', label: 'Columns', icon: '▥', group: null, container: true,
     component: Columns, create: () => ({}),
+    initChildren: (make) => {
+      const col = () => { const c = make('column'); c.children = [make('paragraph')]; return c; };
+      return [col(), col()];
+    },
     toMarkdown: (b, h) => (b.children || []).map((c) => h.renderChildrenRaw(c)).filter(Boolean).join('\n\n'),
     toHTML: (b, h) => `<div class="sc-columns">${h.renderChildrenRaw(b)}</div>`,
   });

@@ -223,6 +223,19 @@ test('slides/slide exporters render backgrounds + separate slides', async () => 
   expect(toMarkdown({ blocks: [deck] }).trim()).toBe('One\n\n---\n\nTwo');
 });
 
+test('columns initChildren seeds two columns, each with a paragraph', async () => {
+  clearRegistry();
+  const { registerBuiltins } = await import('../blocks/index.js');
+  registerBuiltins();
+  const { getBlock } = await import('./registry.js');
+  const make = (type) => ({ type, children: [] });
+  const kids = getBlock('columns').initChildren(make);
+  expect(kids.map((c) => c.type)).toEqual(['column', 'column']);
+  expect(kids[0].children.map((c) => c.type)).toEqual(['paragraph']);
+  // bare `column` is hidden from the slash menu (created via Columns / side-drop)
+  expect(getBlock('column').slashHidden).toBe(true);
+});
+
 test('button + accordion exporters', async () => {
   clearRegistry();
   const { registerBuiltins } = await import('../blocks/index.js');

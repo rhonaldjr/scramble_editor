@@ -229,10 +229,12 @@
 .sc-embed__wrap { position: relative; display: inline-block; width: 100%; max-width: 100%; vertical-align: top; }
 .sc-embed__frame { width: 100%; aspect-ratio: 16 / 9; min-height: 220px; border: 0; border-radius: 6px; display: block; }
 .sc-embed .sc-media__url { margin-top: 6px; }
+.sc-webpage { flex: 1; min-width: 0; }
 .sc-webpage__wrap { position: relative; display: block; width: 100%; max-width: 100%; }
 .sc-webpage__frame { width: 100%; height: 100%; border: 0; border-radius: 6px; display: block; background: var(--sc-bg); }
 .sc-webpage .sc-media__url { margin-top: 6px; }
 
+.sc-document { flex: 1; min-width: 0; }
 .sc-document__wrap { position: relative; display: flex; flex-direction: column; width: 100%; max-width: 100%; border: 1px solid var(--sc-faint); border-radius: 8px; overflow: hidden; background: var(--sc-bg); }
 .sc-document__bar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--sc-faint); font-size: 13px; background: var(--sc-hover, rgba(0,0,0,0.03)); }
 .sc-document__type { font-weight: 600; white-space: nowrap; }
@@ -247,7 +249,7 @@
 .sc-document__btn { cursor: pointer; padding: 10px; border-radius: 6px; background: var(--sc-hover, rgba(0,0,0,0.04)); font-size: 14px; }
 
 /* Button block */
-.sc-button-wrap { position: relative; margin: 6px 0; display: flex; }
+.sc-button-wrap { position: relative; flex: 1; min-width: 0; margin: 6px 0; display: flex; }
 .sc-button {
   font: inherit; font-weight: 600; cursor: pointer;
   padding: 8px 16px; border-radius: var(--sc-radius);
@@ -342,7 +344,7 @@
 .sc-toc__sticky { display: inline-flex; gap: 4px; margin-top: 8px; font-size: 12px; color: var(--sc-muted); }
 
 /* columns */
-.sc-columns { display: flex; gap: 20px; width: 100%; align-items: flex-start; }
+.sc-columns { flex: 1; min-width: 0; display: flex; gap: 20px; width: 100%; align-items: flex-start; }
 .sc-column { flex: 1; min-width: 0; }
 .sc-edge-left > .sc-block__row { box-shadow: inset 3px 0 0 var(--sc-accent); }
 .sc-edge-right > .sc-block__row { box-shadow: inset -3px 0 0 var(--sc-accent); }
