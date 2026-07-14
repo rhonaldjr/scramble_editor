@@ -42,6 +42,7 @@
           :focus-mode="focusMode"
           :theme="theme"
           :width="editorWidth"
+          :fonts="fonts"
           @comment-added="onCommentAdded"
           @comment-resolved="onCommentResolved"
           @event="onEvent"
@@ -138,6 +139,14 @@ const editorWidth = ref('normal'); // 'normal' | 'full' | 'half' — programmabl
 const features = reactive({ slashMenu: true, shortcuts: true, toolbar: true, dragAndDrop: true });
 // Page config: gates blocks/toolbar and picks the default export format.
 const config = reactive({ output: 'markdown' });
+
+// Custom fonts. The component injects a <link> for any entry with a `url`, and
+// applies `family` when the page-style (Aa) font picker selects it by `id`.
+const fonts = [
+  { id: 'inter', label: 'Inter', family: '"Inter", sans-serif', url: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap' },
+  { id: 'lora', label: 'Lora', family: '"Lora", Georgia, serif', url: 'https://fonts.googleapis.com/css2?family=Lora:wght@400;600&display=swap' },
+  { id: 'jetbrains', label: 'JetBrains Mono', family: '"JetBrains Mono", monospace', url: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap' },
+];
 
 const json = (v) => JSON.stringify(v, null, 2);
 function defaultDoc() {

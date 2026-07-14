@@ -74,6 +74,7 @@ const props = defineProps({
   focusMode: { type: Boolean, default: false },     // dim inactive blocks
   theme: { type: String, default: 'auto' },         // 'auto' | 'light' | 'dark'
   width: { type: [String, Number], default: 'normal' }, // 'normal' | 'full' | 'half' | number(px) | CSS length
+  fonts: { type: Array, default: () => [] },        // custom fonts: [{ id, label, family, url? }]
 });
 const emit = defineEmits([
   'update:modelValue', 'ready', 'change', 'event',
@@ -142,15 +143,35 @@ function setFullscreen(v) {
 }
 function toggleFullscreen() { setFullscreen(!fullscreen.value); }
 
-// Programmable editor width (max-width). Full screen ignores it (CSS wins).
+// Programmable editor width (max-width) + custom font family.
 const rootStyle = computed(() => {
-  if (fullscreen.value) return {};
-  const w = props.width;
-  if (w == null || w === 'normal') return {};
-  if (w === 'full') return { maxWidth: '100%' };
-  if (w === 'half') return { maxWidth: '50%' };
-  return { maxWidth: typeof w === 'number' ? `${w}px` : String(w) };
+  const s = {};
+  if (!fullscreen.value) {
+    const w = props.width;
+    if (w === 'full') s.maxWidth = '100%';
+    else if (w === 'half') s.maxWidth = '50%';
+    else if (w != null && w !== 'normal') s.maxWidth = typeof w === 'number' ? `${w}px` : String(w);
+  }
+  const fontId = (doc.style && doc.style.font) || 'default';
+  const custom = (props.fonts || []).find((f) => (f.id || f.value) === fontId);
+  if (custom && custom.family) s.fontFamily = custom.family;
+  return s;
 });
+
+// Inject a <link> for any custom font that provides a url (host convenience).
+function ensureFontLinks() {
+  if (typeof document === 'undefined') return;
+  (props.fonts || []).forEach((f) => {
+    if (f.url && !document.querySelector(`link[data-scramble-font="${f.url}"]`)) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = f.url;
+      link.setAttribute('data-scramble-font', f.url);
+      document.head.appendChild(link);
+    }
+  });
+}
+watch(() => props.fonts, ensureFontLinks, { immediate: true, deep: true });
 
 // Word / character count (Phase V12).
 function blockText(b) {
@@ -614,6 +635,7 @@ const ctx = {
   commentUi, commentsFor, openComments, closeComments, insertMention,
   // V12
   activeBlockId, focusMode: computed(() => props.focusMode),
+  fonts: computed(() => props.fonts || []),
 };
 provide(EditorKey, ctx);
 

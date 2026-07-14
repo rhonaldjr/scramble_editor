@@ -1,7 +1,10 @@
 // Rich-text segments — inline formatting stored as marks in data, never raw
 // HTML. Pure functions; unit-testable, framework-free.
 //
-// A segment is { text, marks: string[], link?, mention? }.
+// A segment is { text, marks: string[], link?, mention?, color?, background? }.
+// `color`/`background` are palette tokens (see colors.js), resolved to CSS here.
+
+import { TEXT_COLORS, BG_COLORS } from './colors.js';
 
 export function createSegment(text = '', marks = [], extra = {}) {
   return { text, marks: [...marks], ...extra };
@@ -16,6 +19,8 @@ export function marksEqual(a = [], b = []) {
 function sameFormatting(a, b) {
   if (a.mention || b.mention) return false;
   if ((a.link || null) !== (b.link || null)) return false;
+  if ((a.color || null) !== (b.color || null)) return false;
+  if ((a.background || null) !== (b.background || null)) return false;
   return marksEqual(a.marks, b.marks);
 }
 
@@ -95,6 +100,8 @@ export function segmentsToHTML(segments) {
       for (const [mark, tag] of MARK_TAGS) {
         if (marks.includes(mark)) html = `<${tag}>${html}</${tag}>`;
       }
+      const style = colorStyle(seg);
+      if (style) html = `<span style="${style}">${html}</span>`;
       if (seg.link) html = `<a href="${escapeAttr(seg.link)}">${html}</a>`;
       if (seg.mention) {
         html = `<span class="sc-mention" data-contact-id="${escapeAttr(seg.mention.contactId || '')}">${html}</span>`;
@@ -122,10 +129,35 @@ export function segmentsToMarkdown(segments) {
         if (marks.includes('strikethrough')) out = `~~${out}~~`;
         if (marks.includes('underline')) out = `<u>${out}</u>`;
       }
+      const style = colorStyle(seg);
+      if (style) out = `<span style="${style}">${out}</span>`;
       if (seg.link) out = `[${out}](${seg.link})`;
       return out;
     })
     .join('');
+}
+
+// Resolve a segment's color/background tokens to a CSS style string (or '').
+function colorStyle(seg) {
+  const parts = [];
+  const c = TEXT_COLORS[seg.color];
+  const bg = BG_COLORS[seg.background];
+  if (c) parts.push(`color:${c}`);
+  if (bg) parts.push(`background:${bg}`);
+  return parts.join(';');
+}
+
+/**
+ * Set (or clear with a falsy/`default` token) a color field ('color' or
+ * 'background') on the plain-text range [start, end).
+ */
+export function setSegmentColor(segments, start, end, field, token) {
+  return mapRange(segments, start, end, (seg) => {
+    const next = { ...seg };
+    if (token && token !== 'default') next[field] = token;
+    else delete next[field];
+    return next;
+  });
 }
 
 function mapRange(segments, start, end, fn) {

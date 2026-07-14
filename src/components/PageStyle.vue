@@ -22,6 +22,7 @@
           <option value="default">Default</option>
           <option value="serif">Serif</option>
           <option value="mono">Mono</option>
+          <option v-for="f in customFonts" :key="f.id || f.value" :value="f.id || f.value">{{ f.label || f.id || f.value }}</option>
         </select>
       </div>
     </div>
@@ -35,6 +36,7 @@ import { useEditor } from '../composables/editor.js';
 const ctx = useEditor();
 const open = ref(false);
 const style = computed(() => ctx.doc.style || {});
+const customFonts = computed(() => (ctx.fonts ? ctx.fonts.value : []));
 
 function set(patch) {
   ctx.setStyle(patch);

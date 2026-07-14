@@ -9,6 +9,20 @@
     >
       {{ t.label }}
     </button>
+    <button v-if="showColor" class="sc-toolbar__btn" title="Text color" @mousedown.prevent="togglePalette('color')">A▾</button>
+    <button v-if="showBg" class="sc-toolbar__btn" title="Highlight" @mousedown.prevent="togglePalette('background')">▮▾</button>
+
+    <div v-if="palette" class="sc-toolbar__palette" @mousedown.stop>
+      <button
+        v-for="tok in COLOR_TOKENS"
+        :key="tok"
+        class="sc-swatch2"
+        :class="{ 'sc-swatch2--default': tok === 'default' }"
+        :style="swatchStyle(tok)"
+        :title="tok"
+        @mousedown.prevent="applyColor(tok)"
+      >{{ palette === 'color' && tok !== 'default' ? 'A' : '' }}</button>
+    </div>
   </div>
 </template>
 
@@ -16,9 +30,11 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useEditor } from '../composables/editor.js';
 import { findBlock } from '../core/model.js';
-import { toggleMark, setLinkOnRange, rangeHasMark } from '../core/segments.js';
+import { toggleMark, setLinkOnRange, rangeHasMark, setSegmentColor } from '../core/segments.js';
+import { COLOR_TOKENS, TEXT_COLORS, BG_COLORS } from '../core/colors.js';
 
 const ctx = useEditor();
+const palette = ref(null); // null | 'color' | 'background'
 const ALL = [
   { mark: 'bold', label: 'B', cls: 'is-bold' },
   { mark: 'italic', label: 'i', cls: 'is-italic' },
@@ -37,6 +53,31 @@ const tools = computed(() => {
   const allowed = ctx.config.value && ctx.config.value.toolbar ? new Set(ctx.config.value.toolbar) : null;
   return allowed ? ALL.filter((t) => allowed.has(t.mark)) : ALL;
 });
+const showColor = computed(() => {
+  const t = ctx.config.value && ctx.config.value.toolbar;
+  return !t || t.includes('color');
+});
+const showBg = computed(() => {
+  const t = ctx.config.value && ctx.config.value.toolbar;
+  return !t || t.includes('background');
+});
+
+function togglePalette(kind) { palette.value = palette.value === kind ? null : kind; }
+function swatchStyle(tok) {
+  if (palette.value === 'color') return { color: TEXT_COLORS[tok] || 'inherit' };
+  return { background: BG_COLORS[tok] || 'transparent' };
+}
+function applyColor(tok) {
+  const range = sel.value;
+  if (!range) return;
+  const loc = findBlock(ctx.doc.blocks, range.id);
+  if (loc) {
+    loc.block.data.segments = setSegmentColor(loc.block.data.segments, range.start, range.end, palette.value, tok);
+    ctx.emitEvent('block:updated', { id: range.id });
+    ctx.markChanged();
+  }
+  palette.value = null;
+}
 
 function contentOf(node) {
   const el = node && (node.nodeType === 1 ? node : node.parentElement);
@@ -59,9 +100,9 @@ function currentRange() {
 }
 
 function onSelChange() {
-  if (!ctx.isEnabled('toolbar')) { visible.value = false; return; }
+  if (!ctx.isEnabled('toolbar')) { visible.value = false; palette.value = null; return; }
   const range = currentRange();
-  if (!range) { visible.value = false; return; }
+  if (!range) { visible.value = false; palette.value = null; return; }
   sel.value = range;
   const loc = findBlock(ctx.doc.blocks, range.id);
   activeMarks.value = {};

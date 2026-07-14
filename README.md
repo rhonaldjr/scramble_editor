@@ -80,6 +80,24 @@ const adapters = {
 | `focusMode` | Boolean | Dim inactive blocks. |
 | `theme` | String | `'auto'` (default) \| `'light'` \| `'dark'`. |
 | `width` | String\|Number | `'normal'` (default) \| `'full'` \| `'half'` \| a number (px) \| any CSS length. Reactive. |
+| `fonts` | Array | Custom fonts `[{ id, label, family, url? }]`. Entries with a `url` get a `<link>` injected automatically; selecting one in the page-style picker applies its `family`. |
+
+Select any text and use the toolbar's **A▾** (text color) or **▮▾** (highlight)
+buttons to color the foreground, background, or both for that range. Colors are
+stored as palette tokens on the segment and exported as inline-style spans in
+Markdown and HTML. Gate them with `config.toolbar` (`'color'`, `'background'`).
+
+Pass custom fonts via the `fonts` prop; the host picks them from the page-style
+(**Aa**) menu:
+
+```vue
+<ScrambleEditor
+  :fonts="[
+    { id: 'inter', label: 'Inter', family: '\"Inter\", sans-serif',
+      url: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap' },
+  ]"
+/>
+```
 
 Drop image/video/audio files anywhere on the editor and Scramble uploads them
 (via `adapters.upload`, or an object-URL fallback) and inserts the matching

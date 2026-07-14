@@ -2,7 +2,7 @@
 import { test, expect } from 'vitest';
 import {
   splitSegmentsAt, toggleMark, segmentsToMarkdown, sliceSegments, concatSegments,
-  normalizeSegments, segmentsToHTML, setLinkOnRange,
+  normalizeSegments, segmentsToHTML, setLinkOnRange, setSegmentColor,
 } from './segments.js';
 import { findBlock, indentBlock, mergeInto, cloneWithIds, flattenBlocks } from './model.js';
 import { registerBlock, clearRegistry } from './registry.js';
@@ -52,6 +52,31 @@ test('segmentsToHTML escapes + nests marks; links + mentions render', () => {
   expect(segmentsToHTML([{ text: 'x', marks: ['bold', 'italic'] }])).toBe('<em><strong>x</strong></em>');
   expect(segmentsToHTML([{ text: 'go', marks: [], link: 'http://a.com' }])).toBe('<a href="http://a.com">go</a>');
   expect(segmentsToHTML([{ text: '@J', marks: [], mention: { contactId: 'c1' } }])).toContain('data-contact-id="c1"');
+});
+
+test('setSegmentColor sets and clears color/background on a range', () => {
+  const base = [{ text: 'Hello world', marks: [] }];
+  const colored = setSegmentColor(base, 6, 11, 'color', 'red');
+  expect(colored).toEqual([
+    { text: 'Hello ', marks: [] },
+    { text: 'world', marks: [], color: 'red' },
+  ]);
+  // renders as an inline style span in both exporters
+  expect(segmentsToHTML(colored)).toBe('Hello <span style="color:#c4554d">world</span>');
+  expect(segmentsToMarkdown(colored)).toBe('Hello <span style="color:#c4554d">world</span>');
+  // adds a second (background) field, then clears the color with `default`
+  const withBg = setSegmentColor(colored, 6, 11, 'background', 'yellow');
+  const cleared = setSegmentColor(withBg, 6, 11, 'color', 'default');
+  expect(cleared).toEqual([
+    { text: 'Hello ', marks: [] },
+    { text: 'world', marks: [], background: 'yellow' },
+  ]);
+});
+
+test('adjacent differently-colored segments do not merge', () => {
+  let segs = setSegmentColor([{ text: 'abcdef', marks: [] }], 0, 3, 'color', 'red');
+  segs = setSegmentColor(segs, 3, 6, 'color', 'blue');
+  expect(segs.map((s) => s.color)).toEqual(['red', 'blue']);
 });
 
 test('setLinkOnRange applies then clears a link', () => {
