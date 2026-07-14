@@ -155,6 +155,22 @@
 .sc-media-gear__row { display: flex; align-items: center; gap: 6px; justify-content: space-between; padding: 4px 2px; }
 .sc-media-gear__btn { border: 1px solid var(--sc-faint); background: var(--sc-bg); border-radius: 5px; padding: 2px 8px; cursor: pointer; font-size: 12px; }
 .sc-media-gear__btn.is-active { border-color: var(--sc-accent); color: var(--sc-accent); }
+
+/* Gear color selector — swatch (opens native picker) + text + clear. Empty = transparent. */
+.sc-gearcolor { display: inline-flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.sc-gearcolor__swatch { position: relative; width: 26px; height: 26px; flex: none; border: 1px solid var(--sc-faint); border-radius: 6px; cursor: pointer; overflow: hidden; }
+.sc-gearcolor__swatch.is-empty {
+  background-color: var(--sc-bg);
+  background-image:
+    linear-gradient(45deg, rgba(128,128,128,0.5) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.5) 75%),
+    linear-gradient(45deg, rgba(128,128,128,0.5) 25%, transparent 25%, transparent 75%, rgba(128,128,128,0.5) 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 5px 5px;
+}
+.sc-gearcolor__swatch input[type="color"] { position: absolute; inset: -6px; width: 40px; height: 40px; padding: 0; border: none; background: none; cursor: pointer; opacity: 0; }
+.sc-gearcolor__text { flex: 1; min-width: 0; width: 100%; padding: 6px 8px; border: 1px solid var(--sc-faint); border-radius: 5px; font: inherit; background: var(--sc-bg); color: inherit; }
+.sc-gearcolor__clear { flex: none; border: none; background: transparent; color: var(--sc-muted, #888); cursor: pointer; font-size: 12px; line-height: 1; padding: 2px 4px; }
+.sc-gearcolor__clear:hover { color: inherit; }
 .sc-media__caption-input, .sc-media__url { width: 100%; margin-top: 6px; padding: 6px 8px; border: 1px solid var(--sc-faint); border-radius: 5px; font: inherit; }
 .sc-media__file { color: var(--sc-accent); text-decoration: none; }
 .sc-media__drop { border: 2px dashed var(--sc-faint); border-radius: 8px; padding: 24px; text-align: center; color: var(--sc-muted); }
@@ -191,31 +207,36 @@
 .sc-slides__btn--go { border-color: var(--sc-accent); color: var(--sc-accent); font-weight: 600; }
 .sc-slides__btn:disabled { opacity: 0.5; cursor: default; }
 
-.sc-slide { position: relative; display: flex; flex-direction: column; gap: 6px; margin: 10px 0; padding: 32px 40px; border: 1px solid var(--sc-faint); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(15,15,15,0.08); }
+/* A slide is a canvas: its aspect ratio is a *minimum* shape. In the editor the
+   slide grows with its content (you can add more than fits and scroll the page),
+   so text is never squished/overlapped. In Present mode the slide is a fixed box
+   that clips whatever spills past its edges. `container-type` lets fitted media
+   size against the slide width. Slide width is set only via the gear. */
+.sc-slide { position: relative; flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; margin: 10px 0; padding: 32px 40px; border: 1px solid var(--sc-faint); border-radius: 10px; box-shadow: 0 1px 3px rgba(15,15,15,0.08); container-type: inline-size; }
 .sc-slide--16x9 { aspect-ratio: 16 / 9; }
 .sc-slide--4x3 { aspect-ratio: 4 / 3; }
 .sc-slide--auto { min-height: 160px; }
 
-/* Media auto-fits its slide: the block grows to share the slide's height, and
-   the media is contained (aspect ratio preserved). Explicit resize (data.width)
-   drops the .sc-fit class and the media uses its own size again. */
-.sc-slide > .sc-block { min-height: 0; }
-.sc-slide > .sc-block:has(> .sc-block__row > .sc-fit) { flex: 1 1 0; }
-.sc-slide > .sc-block:has(> .sc-block__row > .sc-fit) > .sc-block__row { height: 100%; min-height: 0; align-items: stretch; }
-.sc-slide .sc-fit { display: flex; min-height: 0; min-width: 0; }
-/* image / video */
-.sc-slide .sc-fit.sc-media .sc-media__frame { display: flex; height: 100%; min-height: 0; max-width: 100%; }
+/* Fitted media is contained within the slide (aspect ratio preserved), sized
+   against the slide width via container units. Explicit resize (data.width)
+   drops .sc-fit and the media uses its own size again. */
+.sc-slide .sc-fit.sc-media .sc-media__frame { max-width: 100%; }
 .sc-slide .sc-fit.sc-media .sc-media__img,
-.sc-slide .sc-fit.sc-media .sc-media__video { width: 100%; height: 100%; object-fit: contain; }
-/* iframe media: document / web page / embed */
-.sc-slide .sc-fit.sc-document .sc-document__wrap,
-.sc-slide .sc-fit.sc-webpage .sc-webpage__wrap,
-.sc-slide .sc-fit.sc-embed .sc-embed__wrap { flex: 1 1 auto; height: 100%; min-height: 0; }
-.sc-slide .sc-fit.sc-embed .sc-embed__frame { height: 100%; aspect-ratio: auto; min-height: 0; }
+.sc-slide .sc-fit.sc-media .sc-media__video { width: auto; height: auto; max-width: 100%; max-height: 50cqw; object-fit: contain; display: block; margin: 0 auto; }
+.sc-slide--4x3 .sc-fit.sc-media .sc-media__img,
+.sc-slide--4x3 .sc-fit.sc-media .sc-media__video { max-height: 68cqw; }
+/* iframe media (document / web page / embed): slide-proportional height */
+.sc-slide .sc-fit.sc-document .sc-document__frame,
+.sc-slide .sc-fit.sc-webpage .sc-webpage__frame,
+.sc-slide .sc-fit.sc-embed .sc-embed__frame { width: 100%; height: 50cqw; aspect-ratio: auto; }
+.sc-slide--4x3 .sc-fit.sc-document .sc-document__frame,
+.sc-slide--4x3 .sc-fit.sc-webpage .sc-webpage__frame,
+.sc-slide--4x3 .sc-fit.sc-embed .sc-embed__frame { height: 68cqw; }
 
 .sc-present { position: fixed; inset: 0; z-index: 9999; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3vmin; }
-.sc-present__stage { width: min(92vw, calc(88vh * 16 / 9)); max-height: 88vh; overflow: auto; }
-.sc-present__stage .sc-slide { width: 100%; aspect-ratio: 16 / 9; margin: 0; box-shadow: 0 8px 40px rgba(0,0,0,0.5); }
+.sc-present__stage { width: min(92vw, calc(88vh * 16 / 9)); max-height: 88vh; }
+/* Present: the slide is a fixed box; content beyond its edges is clipped. */
+.sc-present__stage .sc-slide { width: 100% !important; max-width: none !important; aspect-ratio: 16 / 9; min-height: 0; margin: 0; overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.5); }
 /* Hide editor chrome while presenting */
 .sc-present .sc-block__handle, .sc-present .sc-collapse, .sc-present .sc-media__gear, .sc-present .sc-resize { display: none !important; }
 .sc-present__controls { position: fixed; bottom: 3vmin; display: flex; align-items: center; gap: 14px; color: #fff; background: rgba(0,0,0,0.5); padding: 8px 14px; border-radius: 999px; }

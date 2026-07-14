@@ -212,11 +212,13 @@ Example: adapters.resolveDocumentUrl + event log. -->
 Build slide-deck documents with multimedia, and give any block a background.
 
 - [x] Block backgrounds: `props.backgroundColor` (any CSS color) + `props.backgroundImage` (URL) applied in render; set via the block handle menu; `ctx.setBackground(id, patch)`
+- [x] Gear color selector (`GearColor.vue`): a visual swatch/native-picker + text + clear used wherever a gear offers a color (slide gear); default state is transparent (inherits the content background)
 - [x] `slide` block (container): a framed slide (16:9 / 4:3 / auto) with a background color/image, holding any blocks — text, images, video, embeds, etc.; ⚙ gear for background + aspect ratio
 - [x] `slides` deck (container): holds `slide` children; **▶ Present** enters a full-screen slideshow (←/→ to navigate, Esc to exit); **+ Add slide**
 - [x] `initChildren` registry hook so a slash-inserted container seeds its initial children (deck → one slide → a paragraph); focus the first editable descendant
 - [x] Exporters: slides/slide → HTML sections (backgrounds inline) and Markdown (`---`-separated); registered in the slash menu
-- [x] Media in a slide auto-fits it (image/video/document/web page/embed contained, aspect ratio kept) until explicitly resized; ⚙ "Fit to slide" reverts — `useSlideFit` + `scInSlide` provide + slide flex/`object-fit` CSS
+- [x] Media in a slide auto-fits it (image/video/document/web page/embed contained, aspect ratio kept via container-query units) until explicitly resized; ⚙ "Fit to slide" reverts — `useSlideFit` + `scInSlide` provide
+- [x] Slide sizing: the slide is a canvas whose aspect ratio is a *minimum* — in the editor it grows with content (no squished/overlapping text) and you can scroll; in Present it's a fixed box that clips overflow. Slide width is set only via the ⚙ gear (not draggable)
 - [ ] Verify (browser): build a deck, drop media into slides, set backgrounds, present full-screen, export
 
 <!-- BlockView rowStyle reads props.backgroundColor/backgroundImage. HandleMenu
@@ -225,6 +227,36 @@ SlideBlock.vue + SlidesBlock.vue (Present overlay). registry initChildren hook +
 slashPick seeding + focusFirstEditable. block-exporters slide*/slides*. Example
 gains a starter deck. -->
 
+
+## Phase V16 — Content Input Formats (HTML / Markdown, targeted load)
+
+Load documents from **HTML** and **Markdown** in addition to JSON, and optionally
+load parsed content into a specific block (replace / append / as children).
+
+- [x] `markdownToBlocks(md)` — pure Markdown → block descriptors (headings, lists incl. to-do, quote, fenced code, hr, images, inline **bold**/*italic*/`code`/~~strike~~/links); mirrors `htmlToBlocks`
+- [x] Export `htmlToBlocks` + `markdownToBlocks` from the public API
+- [x] Imperative `setContent(content, { format: 'json'|'html'|'markdown', blockId?, mode? })` + `loadHTML()` / `loadMarkdown()` convenience methods; `mode` = `replace` (default, whole doc or target block) | `append` (after target) | `children` (into a container)
+- [x] `content-loaded` event `{ format, blockId?, mode?, count }`
+- [x] Example app: a "Load HTML / Markdown" panel demonstrating whole-doc load and load-into-a-block
+- [ ] Verify (browser): paste Markdown/HTML into the loader → structured blocks; target a block and confirm replace/append/children
+
+<!-- Core: src/core/markdown-import.js (markdownToBlocks/parseInline — pure,
+Vitest). index.js exports htmlToBlocks + markdownToBlocks. ScrambleEditor:
+setContent/loadHTML/loadMarkdown (materialize via createBlock, model.insertAfter/
+removeBlock), content-loaded event. Reuses core/html-import.js. -->
+
+
+## Phase V17 — Client-Themable UI (buttons, controls, chrome)
+
+Let the host app restyle the editor's own UI (toolbar, menus, gear, slide/deck
+buttons, present controls) — colors, text/label colors, borders, radius — without
+forking CSS.
+
+- [ ] Expose a documented set of CSS custom properties (design tokens) for the editor chrome: button background/hover/active, button text, accent, border, radius, popover background/foreground, etc.
+- [ ] Refactor component styles to consume those tokens (buttons, toolbar, slash/handle/color panels, gear, slides/deck + present controls) instead of hard-coded colors
+- [ ] Optional `theme` prop object (or `--sc-*` overrides) the host can pass; document precedence (host tokens > built-in light/dark)
+- [ ] Example app: a small "Brand" control that live-restyles the editor's buttons/accent to show it working
+- [ ] Verify (browser): host overrides recolor all controls in light + dark without touching content styling
 
 
 ## Manual Test Checklist (after each phase, on Node 18+)

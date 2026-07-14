@@ -37,6 +37,7 @@ listen to typed events, and wire your **own backend** through adapter functions.
 - [Usage scenarios](#usage-scenarios)
   - [1. Send & receive data (persistence)](#1-send--receive-data-persistence)
   - [2. Read-only / published view](#2-read-only--published-view)
+  - [3a. Load from HTML / Markdown](#3a-load-from-html--markdown-and-into-a-specific-block)
   - [3. Export to Markdown / HTML](#3-export-to-markdown--html)
   - [4. Gate features & blocks by config](#4-gate-features--blocks-by-config)
   - [5. Page style, width, fonts, theme](#5-page-style-width-fonts-theme)
@@ -261,8 +262,8 @@ Every mutation emits a typed event **and** a catch-all `@event` with
 `block-duplicated`, `block-collapsed`, `block-link-copied`, `style-changed`,
 `slash-opened`, `slash-selected`, `shortcut-applied`, `media-uploaded`,
 `media-resized`, `media-configured`, `document-added`, `document-configured`,
-`selection-blocks`, `page-link-open`, `cursor-changed`, `comment-added`,
-`comment-resolved`, `mention-inserted`, `fullscreen-changed`.
+`content-loaded`, `selection-blocks`, `page-link-open`, `cursor-changed`,
+`comment-added`, `comment-resolved`, `mention-inserted`, `fullscreen-changed`.
 
 ```vue
 <ScrambleEditor
@@ -280,10 +281,13 @@ const editor = ref(null);
 // editor.value.getMarkdown(), etc.
 ```
 
-`getDocument()`, `setDocument(doc)`, `getMarkdown()`, `getHTML()`,
-`getExport()` (per `config.output`), `getWordCount()`, `setStyle(patch)`,
-`enable(feature)`, `disable(feature)`, `setReadonly(v)`,
-`setFullscreen(v)` / `toggleFullscreen()` / `isFullscreen()`, `focus()`.
+`getDocument()`, `setDocument(doc)`,
+`setContent(content, { format, blockId?, mode? })` /
+`loadHTML(html, opts?)` / `loadMarkdown(md, opts?)`,
+`getMarkdown()`, `getHTML()`, `getExport()` (per `config.output`),
+`getWordCount()`, `setStyle(patch)`, `enable(feature)`, `disable(feature)`,
+`setReadonly(v)`, `setFullscreen(v)` / `toggleFullscreen()` / `isFullscreen()`,
+`focus()`.
 
 ### Adapters
 
@@ -345,6 +349,28 @@ changes. See [`examples/PersistedEditor.vue`](examples/PersistedEditor.vue).
 `readonly` (or `config.locked`) turns off contenteditable and makes the handle
 menu / slash / toolbar / shortcuts inert. See
 [`examples/ReadonlyViewer.vue`](examples/ReadonlyViewer.vue).
+
+### 3a. Load from HTML / Markdown (and into a specific block)
+
+Besides JSON (`v-model` / `setDocument`), the editor parses **HTML** and
+**Markdown** into structured blocks. Load the whole document, or target one block:
+
+```js
+// whole document
+editor.value.loadMarkdown('# Title\n\n- one\n- two');
+editor.value.loadHTML('<h2>Report</h2><p>Body…</p>');
+
+// into a specific block — mode: 'replace' (default) | 'append' | 'children'
+editor.value.setContent('<p>new intro</p>', { format: 'html', blockId: 'intro', mode: 'replace' });
+editor.value.setContent('- a\n- b', { format: 'markdown', blockId: 'sec', mode: 'append' });
+```
+
+Emits `content-loaded` `{ format, blockId?, mode?, count }`. The pure parsers are
+also exported for use outside the component:
+
+```js
+import { htmlToBlocks, markdownToBlocks } from 'scramble-editor-vue';
+```
 
 ### 3. Export to Markdown / HTML
 

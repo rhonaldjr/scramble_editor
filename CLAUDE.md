@@ -147,7 +147,7 @@ Typed events (also surfaced via a catch-all `@event` `{ type, detail }`):
 `block-deleted`, `block-moved`, `block-converted`, `block-duplicated`,
 `block-collapsed`, `selection-blocks`, `slash-opened`, `slash-selected`,
 `shortcut-applied`, `media-uploaded`, `media-resized`, `media-configured`,
-`document-added`, `document-configured`, `page-link-open`, `block-custom`. Add
+`document-added`, `document-configured`, `content-loaded`, `page-link-open`, `block-custom`. Add
 new events here and document the payload where emitted.
 
 ## Testing Expectations

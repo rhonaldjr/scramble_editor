@@ -12,6 +12,7 @@ import {
   registerBlock, getBlock, listBlocks, hasBlock,
   useEditor,               // editor context, for use inside custom block components
   toMarkdown, toHTML,      // export a document object
+  htmlToBlocks, markdownToBlocks,  // parse HTML / Markdown → block descriptors
   createSegment, segmentsText, segmentsToHTML, segmentsToMarkdown, normalizeSegments,
   version,
 } from 'scramble-editor-vue';

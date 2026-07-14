@@ -20,7 +20,7 @@
         </div>
         <label class="sc-media-gear__row">
           <span>Color</span>
-          <input type="text" placeholder="#0b1e3b / rgb()…" :value="block.props && block.props.backgroundColor || ''" @change="setBg($event.target.value)" />
+          <GearColor :model-value="(block.props && block.props.backgroundColor) || ''" @update:model-value="setBg" />
         </label>
         <label class="sc-media-gear__row">
           <span>Image URL</span>
@@ -38,6 +38,10 @@
             >{{ a.replace('x', ':') }}</button>
           </span>
         </div>
+        <label class="sc-media-gear__row">
+          <span>Width</span>
+          <input type="number" min="240" step="20" placeholder="full" :value="block.data.width || ''" @change="setWidth($event.target.value)" />
+        </label>
       </div>
     </template>
   </div>
@@ -47,6 +51,7 @@
 import { ref, computed, provide, onMounted, onBeforeUnmount } from 'vue';
 import { useEditor } from '../composables/editor.js';
 import BlockView from '../components/BlockView.vue';
+import GearColor from '../components/GearColor.vue';
 
 // Tell descendant media blocks they live in a slide, so they auto-fit it.
 provide('scInSlide', true);
@@ -75,6 +80,13 @@ const slideStyle = computed(() => {
     s.backgroundSize = 'cover';
     s.backgroundPosition = 'center';
   }
+  // By default the slide fills the editor width (CSS flex: 1); a gear-set width
+  // pins it to a fixed size instead. Width is only ever set here, not by drag.
+  if (props.block.data && props.block.data.width) {
+    s.flex = 'none';
+    s.width = `${props.block.data.width}px`;
+    s.maxWidth = '100%';
+  }
   return s;
 });
 
@@ -86,6 +98,11 @@ function setBg(value) { ctx.setBackground(props.block.id, { color: String(value 
 function setImage(value) { ctx.setBackground(props.block.id, { image: String(value || '').trim() }); }
 function setAspect(a) {
   props.block.data = { ...(props.block.data || {}), aspect: a };
+  changed();
+}
+function setWidth(v) {
+  const n = Number(v);
+  props.block.data.width = n > 0 ? n : null;
   changed();
 }
 

@@ -19,6 +19,8 @@
 
   Paste a rich web page into the editor and it becomes structured blocks
   (headings/lists/tables), and the "Web page" slash block previews any URL.
+  The side panel's "Load content" box parses HTML/Markdown into the document or
+  into a specific block (setContent / loadHTML / loadMarkdown).
 
   Swap localStorage / data URLs for your real backend and nothing about the
   component changes.
@@ -72,6 +74,22 @@
         <h3>Set (push)</h3>
         <button @click="pushSample">Set via v-model</button>
         <button @click="editor.focus()">Focus</button>
+
+        <h3>Load content (HTML / Markdown)</h3>
+        <select v-model="loadFormat">
+          <option value="markdown">Markdown</option>
+          <option value="html">HTML</option>
+        </select>
+        <textarea v-model="loadText" rows="5" placeholder="# Paste Markdown or HTML here"></textarea>
+        <input v-model="loadBlockId" placeholder="target block id (optional)" />
+        <select v-model="loadMode">
+          <option value="replace">replace</option>
+          <option value="append">append after</option>
+          <option value="children">into (children)</option>
+        </select>
+        <button @click="doLoad">
+          {{ loadBlockId ? `Load into #${loadBlockId}` : 'Load into document' }}
+        </button>
 
         <h3>Features</h3>
         <label v-for="(on, name) in features" :key="name">
@@ -415,6 +433,19 @@ function pushSample() {
     blocks: [{ id: 'x', type: 'heading-2', data: { segments: [{ text: 'Pushed via v-model ✅', marks: [] }] }, props: {}, children: [] }],
   };
   log('host set document');
+}
+
+// Load HTML/Markdown — into the whole document, or a specific block by id.
+const loadFormat = ref('markdown');
+const loadText = ref('## Loaded from Markdown\n\n- point one\n- point two\n\n> Parsed into real blocks.');
+const loadBlockId = ref('');
+const loadMode = ref('replace');
+function doLoad() {
+  if (!editor.value) return;
+  const opts = { format: loadFormat.value };
+  if (loadBlockId.value.trim()) { opts.blockId = loadBlockId.value.trim(); opts.mode = loadMode.value; }
+  const ok = editor.value.setContent(loadText.value, opts);
+  log(ok ? `loaded ${loadFormat.value}${opts.blockId ? ` → #${opts.blockId} (${opts.mode})` : ''}` : 'load failed (block not found)');
 }
 </script>
 

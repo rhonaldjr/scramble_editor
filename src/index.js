@@ -23,6 +23,12 @@ export { useEditor } from './composables/editor.js';
 // Export helpers (host may run these outside the component too).
 export { toMarkdown, toHTML } from './core/exporter.js';
 
+// Import helpers — parse HTML / Markdown into block descriptors ({ type, data }).
+// Feed the results to the editor via its `setContent` / `loadHTML` / `loadMarkdown`
+// methods, or build a document yourself.
+export { htmlToBlocks } from './core/html-import.js';
+export { markdownToBlocks } from './core/markdown-import.js';
+
 // Segment helpers commonly needed when authoring block data + exporters.
 export {
   createSegment,

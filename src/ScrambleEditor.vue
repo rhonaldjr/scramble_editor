@@ -61,6 +61,7 @@ import {
 } from './core/segments.js';
 import { toMarkdown, toHTML } from './core/exporter.js';
 import { htmlToBlocks, textToBlocks } from './core/html-import.js';
+import { markdownToBlocks } from './core/markdown-import.js';
 
 registerBuiltins();
 
@@ -83,7 +84,7 @@ const emit = defineEmits([
   'block-duplicated', 'block-link-copied', 'style-changed', 'block-collapsed',
   'slash-opened', 'slash-selected', 'shortcut-applied',
   'media-uploaded', 'media-resized', 'media-configured',
-  'document-added', 'document-configured',
+  'document-added', 'document-configured', 'content-loaded',
   'selection-blocks', 'page-link-open', 'cursor-changed',
   'comment-added', 'comment-resolved', 'mention-inserted', 'word-count', 'fullscreen-changed',
 ]);
@@ -767,6 +768,69 @@ function setDocument(val) {
   doc.blocks = next.blocks || [];
 }
 
+// Parse content of a given format into block descriptors / blocks.
+function parseContent(content, format) {
+  if (format === 'markdown' || format === 'md') return markdownToBlocks(String(content));
+  if (format === 'html') return htmlToBlocks(String(content));
+  // json: a document object, an array of blocks, or a JSON string of either
+  let value = content;
+  if (typeof value === 'string') { try { value = JSON.parse(value); } catch { return []; } }
+  if (Array.isArray(value)) return value;
+  if (value && Array.isArray(value.blocks)) return value.blocks;
+  return [];
+}
+
+// Turn descriptors ({type,data}) or full blocks (with id) into real blocks.
+function materialize(items) {
+  return (items || []).filter(Boolean).map((it) => {
+    if (it && it.id && it.type) {
+      const b = clone(it);
+      if (b.children) b.children = materialize(b.children);
+      return b;
+    }
+    const b = createBlock(it.type, it.data || {});
+    if (it.children) b.children = materialize(it.children);
+    return b;
+  });
+}
+
+/**
+ * Load content from JSON | HTML | Markdown, into the whole document or a
+ * specific block. Options: { format='json', blockId?, mode='replace' }.
+ * mode: 'replace' (whole doc, or replace the target block), 'append' (insert
+ * after the target), 'children' (set the target container's children).
+ */
+function setContent(content, options = {}) {
+  const format = options.format || 'json';
+  const blocks = materialize(parseContent(content, format));
+
+  if (!options.blockId) {
+    // Whole-document load. A full JSON doc also carries title/style.
+    if (format === 'json' && content && !Array.isArray(content) && typeof content !== 'string' && content.blocks) {
+      setDocument(content);
+    } else {
+      doc.blocks = blocks.length ? blocks : blankDoc().blocks;
+    }
+    emitEvent('content:loaded', { format, count: blocks.length });
+    markChanged();
+    return true;
+  }
+
+  const loc = model.findBlock(doc.blocks, options.blockId);
+  if (!loc) return false;
+  const mode = options.mode || 'replace';
+  if (mode === 'children') {
+    loc.block.children = blocks;
+  } else {
+    let anchor = options.blockId;
+    blocks.forEach((b) => { model.insertAfter(doc.blocks, anchor, b); anchor = b.id; });
+    if (mode === 'replace') model.removeBlock(doc.blocks, options.blockId);
+  }
+  emitEvent('content:loaded', { format, blockId: options.blockId, mode, count: blocks.length });
+  markChanged();
+  return true;
+}
+
 // Emit the local caret position so a host can broadcast presence.
 function onCursorMove() {
   const sel = window.getSelection();
@@ -812,6 +876,9 @@ onBeforeUnmount(() => {
 defineExpose({
   getDocument: () => clone(doc),
   setDocument,
+  setContent,
+  loadHTML: (html, options = {}) => setContent(html, { ...options, format: 'html' }),
+  loadMarkdown: (md, options = {}) => setContent(md, { ...options, format: 'markdown' }),
   getMarkdown: () => toMarkdown(doc),
   getHTML: () => toHTML(doc),
   getExport: () => (config.value.output === 'html' ? toHTML(doc) : toMarkdown(doc)),

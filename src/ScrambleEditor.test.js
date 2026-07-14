@@ -215,6 +215,42 @@ test('media inside a slide auto-fits (sc-fit, no fixed width) until resized', as
   expect(fig2.find('.sc-media__frame').attributes('style')).toContain('width: 240px');
 });
 
+test('slide width is set via the gear (data.width → inline style), not by dragging', async () => {
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{
+      id: 'deck', type: 'slides', data: {}, props: {}, children: [
+        { id: 's1', type: 'slide', data: { aspect: '16x9', width: 720 }, props: {}, children: [
+          { id: 'p1', type: 'paragraph', data: { segments: [{ text: 'Hi', marks: [] }] }, props: {}, children: [] },
+        ] },
+      ],
+    }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  const slide = wrapper.find('.sc-slide');
+  expect(slide.attributes('style')).toContain('width: 720px');
+  // the slide has no drag-resize handle of its own
+  expect(slide.find('.sc-resize').exists()).toBe(false);
+});
+
+test('a slide with no gear width has no fixed width (fills the editor via CSS flex)', async () => {
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{
+      id: 'deck', type: 'slides', data: {}, props: {}, children: [
+        { id: 's1', type: 'slide', data: { aspect: '16x9' }, props: {}, children: [
+          { id: 'p1', type: 'paragraph', data: { segments: [{ text: '', marks: [] }] }, props: {}, children: [] },
+        ] },
+      ],
+    }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  const style = wrapper.find('.sc-slide').attributes('style') || '';
+  expect(style).not.toContain('width');
+});
+
 test('the same image outside a slide is not fit-constrained', async () => {
   const doc = {
     id: 'd', title: 't', style: {},
@@ -223,6 +259,71 @@ test('the same image outside a slide is not fit-constrained', async () => {
   const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
   await flushPromises();
   expect(wrapper.find('.sc-media').classes()).not.toContain('sc-fit');
+});
+
+test('loadMarkdown replaces the whole document with structured blocks', async () => {
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: sampleDoc() } });
+  await flushPromises();
+  wrapper.vm.loadMarkdown('# New\n\n- a\n- b');
+  await flushPromises();
+  await nextTick();
+  const types = wrapper.vm.getDocument().blocks.map((b) => b.type);
+  expect(types).toEqual(['heading-1', 'bulleted-list', 'bulleted-list']);
+  expect(wrapper.text()).toContain('New');
+});
+
+test('setContent loads HTML into a specific block (replace / append / children)', async () => {
+  const base = () => ({
+    id: 'd', title: 't', style: {},
+    blocks: [
+      { id: 'a', type: 'paragraph', data: { segments: [{ text: 'A', marks: [] }] }, props: {}, children: [] },
+      { id: 'b', type: 'paragraph', data: { segments: [{ text: 'B', marks: [] }] }, props: {}, children: [] },
+    ],
+  });
+
+  // replace target block 'a' with parsed HTML
+  let w = mount(ScrambleEditor, { props: { modelValue: base() } });
+  await flushPromises();
+  w.vm.setContent('<h2>X</h2><p>Y</p>', { format: 'html', blockId: 'a', mode: 'replace' });
+  await flushPromises();
+  let ids = w.vm.getDocument().blocks.map((x) => x.type);
+  expect(ids).toEqual(['heading-2', 'paragraph', 'paragraph']); // a replaced by 2 blocks, b remains
+
+  // append after 'a'
+  w = mount(ScrambleEditor, { props: { modelValue: base() } });
+  await flushPromises();
+  w.vm.setContent('<p>ins</p>', { format: 'html', blockId: 'a', mode: 'append' });
+  await flushPromises();
+  const doc = w.vm.getDocument();
+  expect(doc.blocks.map((x) => x.id)[0]).toBe('a');
+  expect(doc.blocks.length).toBe(3);
+});
+
+test('slide gear shows a color selector; empty = transparent, picking sets a hex', async () => {
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{
+      id: 'deck', type: 'slides', data: {}, props: {}, children: [
+        { id: 's1', type: 'slide', data: { aspect: '16x9' }, props: {}, children: [
+          { id: 'p1', type: 'paragraph', data: { segments: [{ text: 'Hi', marks: [] }] }, props: {}, children: [] },
+        ] },
+      ],
+    }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  // open the slide gear
+  await wrapper.find('.sc-slide .sc-media__gear').trigger('mousedown');
+  await nextTick();
+  const picker = wrapper.find('.sc-gearcolor input[type="color"]');
+  expect(picker.exists()).toBe(true);
+  // default: no color set → swatch shows the transparent (empty) state
+  expect(wrapper.find('.sc-gearcolor__swatch').classes()).toContain('is-empty');
+  // picking a color updates the slide's background prop
+  picker.element.value = '#0b1e3b';
+  await picker.trigger('input');
+  await nextTick();
+  expect(wrapper.vm.getDocument().blocks[0].children[0].props.backgroundColor).toBe('#0b1e3b');
 });
 
 test('readonly renders without contenteditable', async () => {
