@@ -61,6 +61,28 @@ test('pasting rich HTML inserts structured blocks instead of flattening', async 
   expect(wrapper.vm.getMarkdown()).toContain('## Section');
 });
 
+test('backspace in an empty nested list item outdents before merging', async () => {
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [
+      {
+        id: 'a', type: 'bulleted-list', data: { segments: [{ text: 'Parent', marks: [] }] }, props: {},
+        children: [{ id: 'b', type: 'bulleted-list', data: { segments: [{ text: '', marks: [] }] }, props: {}, children: [] }],
+      },
+    ],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  const nested = wrapper.findAll('[data-role="content"]')[1];
+  nested.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+  await flushPromises();
+  await nextTick();
+  const top = wrapper.vm.getDocument().blocks;
+  // 'b' climbed out to the top level (no longer a child of 'a')
+  expect(top.map((x) => x.id)).toEqual(['a', 'b']);
+  expect(top[0].children.length).toBe(0);
+});
+
 test('readonly renders without contenteditable', async () => {
   const wrapper = mount(ScrambleEditor, { props: { modelValue: sampleDoc(), readonly: true } });
   await flushPromises();

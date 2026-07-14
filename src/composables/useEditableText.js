@@ -139,7 +139,7 @@ export function useEditableText(block, ctx) {
       event.preventDefault();
       ctx.splitBlock(block.id, offset);
     } else if (event.key === 'Backspace' && offset === 0 && collapsed()) {
-      if (ctx.mergeWithPrevious(block.id)) event.preventDefault();
+      if (ctx.outdentOrMerge(block.id)) event.preventDefault();
     } else if (event.key === 'Tab') {
       event.preventDefault();
       if (event.shiftKey) ctx.outdent(block.id);

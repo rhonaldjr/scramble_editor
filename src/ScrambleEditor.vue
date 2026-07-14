@@ -322,6 +322,29 @@ function pasteHTML(id, offset, html, plainText) {
   return true;
 }
 
+// Backspace at the start of a block. An empty *nested* block outdents one level
+// per press (walking left toward its parent) before we ever merge/delete — so an
+// indented empty list item climbs back out instead of jumping into a sibling.
+// Once at the top level it merges into the previous item, or (if nothing to
+// merge into) drops the list marker and becomes a plain paragraph.
+function outdentOrMerge(id) {
+  const loc = model.findBlock(doc.blocks, id);
+  if (!loc) return false;
+  const def = getBlock(loc.block.type);
+  const empty = def && def.editableText && segmentsLength(loc.block.data.segments) === 0;
+  if (empty && loc.parent) { outdent(id); return true; }
+  if (mergeWithPrevious(id)) return true;
+  if (empty && def && def.listMarker) {
+    loc.block.type = 'paragraph';
+    loc.block.data = getBlock('paragraph').create({ segments: loc.block.data.segments });
+    requestFocus(id, 0);
+    emitEvent('block:converted', { id, to: 'paragraph' });
+    markChanged();
+    return true;
+  }
+  return false;
+}
+
 function mergeWithPrevious(id) {
   const prev = model.previousBlock(doc.blocks, id);
   if (!prev) return false;
@@ -668,7 +691,7 @@ async function onRootDrop(e) {
 const ctx = {
   doc, config, adapters, readonly, focusRequest, drag, handle, rootEl,
   isEnabled, emitEvent, markChanged, requestFocus, clearFocus,
-  createBlock, splitBlock, mergeWithPrevious, indent, outdent, moveBlock, removeBlock,
+  createBlock, splitBlock, mergeWithPrevious, outdentOrMerge, indent, outdent, moveBlock, removeBlock,
   focusPrevious, focusNext, slashPick, pasteHTML,
   // V4
   turnInto: turnIntoBlock, turnIntoTargets, duplicate, moveUp: moveUpBlock, moveDown: moveDownBlock,
