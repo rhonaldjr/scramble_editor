@@ -8,6 +8,9 @@
     • Persistence  — load on mount + autosave to localStorage on @change.
     • Uploads      — an `upload` adapter (here: data URLs so media survives a
                      refresh; use your storage/CDN in a real app).
+    • Documents    — a `resolveDocumentUrl` adapter resolves how the Document
+                     block previews pdf/docx/pptx/xlsx/odt (here: Google viewer
+                     for public files; default is native PDF + Office viewer).
     • Contacts     — a `fetchContacts` adapter (here: a static list).
     • Events       — an audit log built from the catch-all @event.
     • Control      — enable/disable features, readonly, imperative get/set/export.
@@ -80,8 +83,9 @@
         <label>width
           <select v-model="editorWidth">
             <option value="normal">normal</option>
-            <option value="full">full (viewport)</option>
-            <option value="half">half</option>
+            <option value="full">full width</option>
+            <option value="75%">75%</option>
+            <option value="50%">50%</option>
           </select>
         </label>
 
@@ -139,7 +143,7 @@ const savedAt = ref(null);
 const readonly = ref(false);
 const focusMode = ref(false);
 const theme = ref('auto');
-const editorWidth = ref('normal'); // 'normal' | 'full' | 'half' — programmable width
+const editorWidth = ref('normal'); // 'normal' | 'full' | '75%' | '50%' — programmable width
 const features = reactive({ slashMenu: true, shortcuts: true, toolbar: true, dragAndDrop: true });
 // Page config: gates blocks/toolbar and picks the default export format.
 const config = reactive({ output: 'markdown' });
@@ -165,6 +169,7 @@ function defaultDoc() {
       { id: 'tip', type: 'paragraph', data: { segments: [{ text: 'Try pasting a rich web page here — headings, lists and tables keep their structure.', marks: [] }] }, props: {}, children: [] },
       { id: 'ct', type: 'contact', data: { contact: null }, props: {}, children: [] },
       { id: 'w', type: 'webpage', data: { url: 'https://example.com', width: null, height: 360 }, props: {}, children: [] },
+      { id: 'doc', type: 'document', data: { url: '', name: '', docType: '', width: null, height: 420 }, props: {}, children: [] },
       { id: 'i', type: 'image', data: { url: '', caption: '' }, props: {}, children: [] },
     ],
   };
@@ -224,6 +229,17 @@ function fileToDataURL(file) {
 }
 const adapters = {
   upload: async (file) => ({ url: await fileToDataURL(file), name: file.name }),
+  // Per-document pull hook for the Document block. The component ships a default
+  // (native PDF + Microsoft Office Online viewer); a host can resolve/proxy/sign
+  // URLs here instead. This demo routes public Office/ODF files through Google's
+  // viewer and serves PDFs directly — real apps would return a signed URL from
+  // their storage. Return '' to let the component fall back to its default.
+  resolveDocumentUrl: async ({ url, type }) => {
+    if (type === 'pdf') return url;
+    const isPublic = /^https?:\/\//i.test(url);
+    if (isPublic && type) return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+    return ''; // data:/blob: (our demo uploads) can't be viewed remotely
+  },
   fetchContacts: async (q) => {
     const all = [
       { id: 'c1', name: 'Jane Cooper', email: 'jane@example.com' },

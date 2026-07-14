@@ -144,14 +144,22 @@ function setFullscreen(v) {
 }
 function toggleFullscreen() { setFullscreen(!fullscreen.value); }
 
+// Named viewport presets for the `width` prop (max-width of the editor column).
+const WIDTH_PRESETS = {
+  full: '100%',
+  'three-quarter': '75%', 75: '75%', '75%': '75%',
+  half: '50%', 50: '50%', '50%': '50%',
+};
+
 // Programmable editor width (max-width) + custom font family.
 const rootStyle = computed(() => {
   const s = {};
   if (!fullscreen.value) {
     const w = props.width;
-    if (w === 'full') s.maxWidth = '100%';
-    else if (w === 'half') s.maxWidth = '50%';
-    else if (w != null && w !== 'normal') s.maxWidth = typeof w === 'number' ? `${w}px` : String(w);
+    if (w != null && w !== 'normal') {
+      const preset = WIDTH_PRESETS[w];
+      s.maxWidth = preset || (typeof w === 'number' ? `${w}px` : String(w));
+    }
   }
   const fontId = (doc.style && doc.style.font) || 'default';
   const custom = (props.fonts || []).find((f) => (f.id || f.value) === fontId);

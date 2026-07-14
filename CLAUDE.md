@@ -99,8 +99,10 @@ examples/                   # host apps consuming the component (Gallery + Minim
 Special blocks: `columns` (children are `column` blocks), `table`
 (`data.rows` = 2D cell-segment arrays), `toc` (renders from headings),
 `page-link` (`data.docId`), media/embed (`data.url` + host-provided metadata),
-`webpage` (`data.url` + `width`/`height` — live iframe preview). Rich-HTML paste
-is imported to structured blocks via `core/html-import.js`.
+`webpage` (`data.url` + `width`/`height` — live iframe preview), `document`
+(`data.url`/`name`/`docType`/`width`/`height` — pdf/office/odf viewer resolved
+via `adapters.resolveDocumentUrl` or a built-in default; see `core/documents.js`).
+Rich-HTML paste is imported to structured blocks via `core/html-import.js`.
 
 ## Block Registry Contract
 
@@ -131,6 +133,7 @@ internals.
 - **`adapters.upload(file) => { url } | url`** — store dropped/selected media.
 - **`adapters.fetchContacts(query) => contact[]`** — mentions / contact block.
 - **`adapters.fetchEmbedMeta(url) => meta`** — bookmark previews.
+- **`adapters.resolveDocumentUrl({url,type,name,blockId}) => url | {url}`** — resolve the Document block's viewer URL (optional; falls back to native PDF + Office Online viewer).
 - **Collaboration / comments / history**: consumed via events + adapters; the
   component provides hooks, the host provides transport/storage.
 
@@ -141,8 +144,8 @@ Typed events (also surfaced via a catch-all `@event` `{ type, detail }`):
 `block-deleted`, `block-moved`, `block-converted`, `block-duplicated`,
 `block-collapsed`, `selection-blocks`, `slash-opened`, `slash-selected`,
 `shortcut-applied`, `media-uploaded`, `media-resized`, `media-configured`,
-`page-link-open`, `block-custom`. Add new events here and document the payload
-where emitted.
+`document-added`, `document-configured`, `page-link-open`, `block-custom`. Add
+new events here and document the payload where emitted.
 
 ## Testing Expectations
 

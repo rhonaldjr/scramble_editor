@@ -179,14 +179,32 @@ Post-V12 enhancements. Import fidelity + inline styling + a live-URL block.
 - [x] Structured HTML paste: rich web-page HTML → real blocks (headings/lists/quotes/code/tables/images), not one flat paragraph — `core/html-import.js`
 - [x] Backspace in an empty nested block outdents toward the parent before merging/removing
 - [x] Paste from Word / Office / Google Docs, retaining format (mostly): strip Word `mso-`/conditional-comment cruft, map heading styles, reconstruct `mso-list` paragraphs into list blocks, read bold/italic/underline/strike from inline styles
+- [x] Named viewport widths (`full` / `75%` / `50%`) on the `width` prop + example selector
 - [ ] Verify (browser): copy a formatted Word doc and paste — headings, lists, bold/italic survive
 
 <!-- Core: src/core/html-import.js (htmlToBlocks/nodeToBlocks/textToBlocks, Office
 normalization). ScrambleEditor.pasteHTML mutation + useEditableText onPaste.
 Blocks: WebPageBlock.vue + webpage registry entry + block-exporters webpage*.
 segments.js setSegmentColor + colorStyle. Fonts wired via ScrambleEditor `fonts`
-prop + ctx.fonts + PageStyle options. Example: data-URL upload (survives reload),
-custom fonts, webpage block. -->
+prop + ctx.fonts + PageStyle options. WIDTH_PRESETS in rootStyle. Example:
+data-URL upload (survives reload), custom fonts, webpage block, width selector. -->
+
+
+## Phase V14 — Document Viewer Block
+
+Slash-inserted viewer for uploaded / linked office & PDF documents.
+
+- [x] `document` block: insert via slash; empty state offers **upload** (`adapters.upload`) or **paste a link** (also settable programmatically via `v-model`)
+- [x] Auto-detect type from extension/name/mime: pdf, doc/docx/odt/rtf, ppt/pptx/odp, xls/xlsx/ods/csv → render appropriately (native PDF iframe; Office/ODF through a viewer URL) with a graceful fallback + download link when no inline preview is possible
+- [x] Free width/height resize (same as the web page block) + ⚙ gear (URL, type override, width, height)
+- [x] Per-block pull interface: `adapters.resolveDocumentUrl({ url, type, name, blockId }) → url | { url }` (host resolves/proxies/signs), with a built-in default (native PDF + Office Online viewer) the consumer can override
+- [x] Events: `document-added`, `document-configured` (+ reuse `media-uploaded` / `media-resized`); example implements the resolver + logs the events
+- [ ] Verify (browser): insert, upload each type + paste a link, resize, confirm resolver + events fire
+
+<!-- Core: src/core/documents.js (detectDocType, docTypeLabel/Icon,
+defaultViewerUrl — pure, Vitest). Block: DocumentBlock.vue + `document` registry
+entry + block-exporters document*. ScrambleEditor emits document-added/configured.
+Example: adapters.resolveDocumentUrl + event log. -->
 
 
 ## Manual Test Checklist (after each phase, on Node 18+)

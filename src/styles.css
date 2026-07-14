@@ -169,6 +169,19 @@
 .sc-webpage__wrap { position: relative; display: block; width: 100%; max-width: 100%; }
 .sc-webpage__frame { width: 100%; height: 100%; border: 0; border-radius: 6px; display: block; background: var(--sc-bg); }
 .sc-webpage .sc-media__url { margin-top: 6px; }
+
+.sc-document__wrap { position: relative; display: flex; flex-direction: column; width: 100%; max-width: 100%; border: 1px solid var(--sc-faint); border-radius: 8px; overflow: hidden; background: var(--sc-bg); }
+.sc-document__bar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--sc-faint); font-size: 13px; background: var(--sc-hover, rgba(0,0,0,0.03)); }
+.sc-document__type { font-weight: 600; white-space: nowrap; }
+.sc-document__name { color: var(--sc-muted, #888); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.sc-document__open { margin-left: auto; color: var(--sc-accent); text-decoration: none; }
+.sc-document__frame { flex: 1; width: 100%; border: 0; display: block; background: #fff; }
+.sc-document__fallback { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 20px; text-align: center; color: var(--sc-muted, #888); }
+.sc-document__fallback a { color: var(--sc-accent); }
+.sc-document__hint { font-size: 12px; }
+.sc-document__drop { display: flex; flex-direction: column; gap: 8px; align-items: stretch; padding: 20px; border: 1px dashed var(--sc-faint); border-radius: 8px; text-align: center; }
+.sc-document__drop.is-over { border-color: var(--sc-accent); background: rgba(35,131,226,0.06); }
+.sc-document__btn { cursor: pointer; padding: 10px; border-radius: 6px; background: var(--sc-hover, rgba(0,0,0,0.04)); font-size: 14px; }
 .sc-bookmark { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--sc-faint); border-radius: 6px; text-decoration: none; color: inherit; }
 .sc-bookmark__title { font-weight: 600; }
 .sc-bookmark__desc, .sc-bookmark__host { color: var(--sc-muted); font-size: 0.85em; margin-top: 2px; }

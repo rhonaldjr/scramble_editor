@@ -62,6 +62,18 @@ export function webpageHTML(b) {
   return `<iframe class="sc-webpage__frame" src="${escAttr(b.data.url)}" style="width:${w};height:${h};border:0" loading="lazy"></iframe>`;
 }
 
+export function documentMarkdown(b) {
+  const url = b.data.url || '';
+  return url ? `[${b.data.name || url}](${url})` : '';
+}
+export function documentHTML(b) {
+  if (!b.data.url) return '';
+  const w = b.data.width ? `${Number(b.data.width)}px` : '100%';
+  const h = `${Number(b.data.height) || 480}px`;
+  const src = escAttr(b.data.viewerUrl || b.data.url);
+  return `<iframe class="sc-document__frame" src="${src}" style="width:${w};height:${h};border:0" loading="lazy"></iframe>`;
+}
+
 export function bookmarkMarkdown(b) {
   if (!b.data.url) return '';
   return `[${(b.data.meta && b.data.meta.title) || b.data.url}](${b.data.url})`;

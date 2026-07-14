@@ -79,7 +79,7 @@ const adapters = {
 | `comments` | Array | Comment threads `[{ id, blockId, resolved, messages }]`. |
 | `focusMode` | Boolean | Dim inactive blocks. |
 | `theme` | String | `'auto'` (default) \| `'light'` \| `'dark'`. |
-| `width` | String\|Number | `'normal'` (default) \| `'full'` \| `'half'` \| a number (px) \| any CSS length. Reactive. |
+| `width` | String\|Number | `'normal'` (default) \| `'full'` (full width) \| `'75%'` \| `'50%'` (aliases: `'three-quarter'`, `'half'`) \| a number (px) \| any CSS length. Reactive. |
 | `fonts` | Array | Custom fonts `[{ id, label, family, url? }]`. Entries with a `url` get a `<link>` injected automatically; selecting one in the page-style picker applies its `family`. |
 
 Select any text and use the toolbar's **A▾** (text color) or **▮▾** (highlight)
@@ -111,10 +111,10 @@ A `#footer` slot receives `{ words, chars }` for a word-count footer.
 `ready`, `change`, `update:modelValue`, `word-count`, and typed: `block-created`,
 `block-updated`, `block-deleted`, `block-moved`, `block-converted`,
 `block-duplicated`, `block-collapsed`, `slash-selected`, `shortcut-applied`,
-`media-uploaded`, `media-resized`, `media-configured`, `selection-blocks`,
-`page-link-open`, `cursor-changed`, `comment-added`, `comment-resolved`,
-`mention-inserted`, `fullscreen-changed`, … plus a catch-all **`event`** with
-`{ type, detail }`.
+`media-uploaded`, `media-resized`, `media-configured`, `document-added`,
+`document-configured`, `selection-blocks`, `page-link-open`, `cursor-changed`,
+`comment-added`, `comment-resolved`, `mention-inserted`, `fullscreen-changed`, …
+plus a catch-all **`event`** with `{ type, detail }`.
 
 ### Methods (template ref)
 
@@ -137,6 +137,7 @@ server itself.
 - **`adapters.upload(file) → { url } | url`** — store dropped/selected media anywhere (S3, your API, an object URL). Without it, media blocks fall back to a URL field.
 - **`adapters.fetchContacts(query) → contact[]`** — power mentions / a contact block.
 - **`adapters.fetchEmbedMeta(url) → { title, image, … }`** — power bookmark previews.
+- **`adapters.resolveDocumentUrl({ url, type, name, blockId }) → url | { url }`** — resolve how the **Document** block previews a file (proxy/sign a URL, or pick a viewer). Optional; without it the component uses a built-in default (native PDF + Microsoft Office Online viewer, with a download fallback when a URL isn't publicly reachable).
 - **Collaboration / comments / history** — consumed via events + adapters; the component provides hooks, the host provides transport/storage.
 
 See [`examples/HostApp.vue`](examples/HostApp.vue) for a working host app that
@@ -172,8 +173,9 @@ registered by the host in [`examples/HostApp.vue`](examples/HostApp.vue).
 paragraph, heading 1–3, quote, bulleted/numbered/checklist, toggle, callout,
 banner, divider, code (highlight.js), image/video/audio/file (upload + resize +
 gear), embed, bookmark, **web page** (live URL preview — resize freely, change
-the URL from the ⚙ gear), table, table-of-contents, columns, page-link — plus
-your own via `registerBlock`.
+the URL from the ⚙ gear), **document** (upload or link a PDF/Word/PowerPoint/
+Excel/ODF file — auto-detected and previewed inline, resizable), table,
+table-of-contents, columns, page-link — plus your own via `registerBlock`.
 
 ### Pasting web content
 

@@ -83,6 +83,55 @@ test('backspace in an empty nested list item outdents before merging', async () 
   expect(top[0].children.length).toBe(0);
 });
 
+test('width prop applies viewport presets (full / 75% / 50%)', async () => {
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: sampleDoc(), width: 'full' } });
+  await flushPromises();
+  const root = wrapper.find('.scramble-editor').element;
+  expect(root.style.maxWidth).toBe('100%');
+  await wrapper.setProps({ width: '75%' });
+  await nextTick();
+  expect(root.style.maxWidth).toBe('75%');
+  await wrapper.setProps({ width: '50%' });
+  await nextTick();
+  expect(root.style.maxWidth).toBe('50%');
+  await wrapper.setProps({ width: 'normal' });
+  await nextTick();
+  expect(root.style.maxWidth).toBe('');
+});
+
+function docWithBlock(data) {
+  return {
+    id: 'd', title: 't', style: {},
+    blocks: [{ id: 'doc1', type: 'document', data: { url: '', name: '', docType: '', width: null, height: 400, ...data }, props: {}, children: [] }],
+  };
+}
+
+test('document block previews a PDF natively (default resolver)', async () => {
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: docWithBlock({ url: 'https://x.com/a.pdf' }) } });
+  await flushPromises();
+  const frame = wrapper.find('.sc-document__frame');
+  expect(frame.exists()).toBe(true);
+  expect(frame.attributes('src')).toBe('https://x.com/a.pdf');
+});
+
+test('document block uses a host resolveDocumentUrl adapter when provided', async () => {
+  const adapters = { resolveDocumentUrl: async ({ url }) => `https://viewer/?f=${encodeURIComponent(url)}` };
+  const wrapper = mount(ScrambleEditor, {
+    props: { modelValue: docWithBlock({ url: 'https://x.com/a.docx' }), adapters },
+  });
+  await flushPromises();
+  await nextTick();
+  expect(wrapper.find('.sc-document__frame').attributes('src')).toBe('https://viewer/?f=' + encodeURIComponent('https://x.com/a.docx'));
+});
+
+test('document block shows a fallback when an office file has no viewable URL', async () => {
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: docWithBlock({ url: 'data:application/vnd;base64,AA', docType: 'word' }) } });
+  await flushPromises();
+  await nextTick();
+  expect(wrapper.find('.sc-document__frame').exists()).toBe(false);
+  expect(wrapper.find('.sc-document__fallback').exists()).toBe(true);
+});
+
 test('readonly renders without contenteditable', async () => {
   const wrapper = mount(ScrambleEditor, { props: { modelValue: sampleDoc(), readonly: true } });
   await flushPromises();
