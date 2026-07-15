@@ -78,6 +78,7 @@ const props = defineProps({
   width: { type: [String, Number], default: 'normal' }, // 'normal' | 'full' | 'half' | number(px) | CSS length
   fonts: { type: Array, default: () => [] },        // custom fonts: [{ id, label, family, url? }]
   tokens: { type: Object, default: () => ({}) },    // UI theme overrides, e.g. { accent: '#e0218a', 'bar-bg': '#2a0a2a' }
+  platform: { type: Object, default: () => ({}) },  // Platform Content sources: { sources: [{ id, name }] }
 });
 const emit = defineEmits([
   'update:modelValue', 'ready', 'change', 'event',
@@ -86,6 +87,7 @@ const emit = defineEmits([
   'slash-opened', 'slash-selected', 'shortcut-applied',
   'media-uploaded', 'media-resized', 'media-configured',
   'document-added', 'document-configured', 'content-loaded', 'button-clicked',
+  'platform-configured', 'platform-loaded',
   'selection-blocks', 'page-link-open', 'cursor-changed',
   'comment-added', 'comment-resolved', 'mention-inserted', 'word-count', 'fullscreen-changed',
 ]);
@@ -742,6 +744,7 @@ const ctx = {
   // V12
   activeBlockId, focusMode: computed(() => props.focusMode),
   fonts: computed(() => props.fonts || []),
+  platform: computed(() => props.platform || {}),
 };
 provide(EditorKey, ctx);
 

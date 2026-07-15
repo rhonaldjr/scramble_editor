@@ -143,6 +143,16 @@ export function accordionItemHTML(b, h) {
   return `<details class="sc-accordion-item"${open}><summary>${h.renderSegments(b.data.segments)}</summary>${h.renderChildrenRaw(b)}</details>`;
 }
 
+// Platform Content: export the last resolved HTML (host content) + optional heading.
+export function platformMarkdown(b) {
+  const head = b.data.heading ? `#### ${b.data.heading}\n\n` : '';
+  return b.data.html ? `${head}${b.data.html}` : `${head}_(platform content)_`;
+}
+export function platformHTML(b) {
+  const head = b.data.heading ? `<h4>${esc(b.data.heading)}</h4>` : '';
+  return `<div class="sc-platform">${head}${b.data.html || ''}</div>`;
+}
+
 export function bookmarkMarkdown(b) {
   if (!b.data.url) return '';
   return `[${(b.data.meta && b.data.meta.title) || b.data.url}](${b.data.url})`;
@@ -174,7 +184,8 @@ export function tableHTML(b) {
       const tag = r === 0 ? 'th' : 'td';
       const cs = (c.colSpan || 1) > 1 ? ` colspan="${c.colSpan}"` : '';
       const rs = (c.rowSpan || 1) > 1 ? ` rowspan="${c.rowSpan}"` : '';
-      return `<${tag}${cs}${rs}>${segmentsToHTML(cellSegments(c))}</${tag}>`;
+      const bg = c.bg ? ` style="background:${escAttr(c.bg)}"` : '';
+      return `<${tag}${cs}${rs}${bg}>${segmentsToHTML(cellSegments(c))}</${tag}>`;
     }).join('');
     return `<tr>${cells}</tr>`;
   }).join('');

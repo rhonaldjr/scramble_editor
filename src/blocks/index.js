@@ -15,17 +15,20 @@ import SlidesBlock from './SlidesBlock.vue';
 import ButtonBlock from './ButtonBlock.vue';
 import AccordionBlock from './AccordionBlock.vue';
 import AccordionItemBlock from './AccordionItemBlock.vue';
+import PlatformBlock from './PlatformBlock.vue';
 import TableBlock from './TableBlock.vue';
 import TocBlock from './TocBlock.vue';
 import PageLinkBlock from './PageLinkBlock.vue';
 import { registerBlock, hasBlock } from '../core/registry.js';
 import { createSegment, normalizeSegments } from '../core/segments.js';
 import { normalizeTable, emptyCell } from '../core/table.js';
+import { clampRefresh } from '../core/platform.js';
 import {
   esc, mediaMarkdown, mediaHTML, embedMarkdown, embedHTML, bookmarkMarkdown, bookmarkHTML,
   webpageMarkdown, webpageHTML, documentMarkdown, documentHTML,
   slideMarkdown, slideHTML, slidesMarkdown, slidesHTML,
   buttonMarkdown, buttonHTML, accordionMarkdown, accordionHTML, accordionItemMarkdown, accordionItemHTML,
+  platformMarkdown, platformHTML,
   tableMarkdown, tableHTML, tocMarkdown, tocHTML, pageLinkMarkdown, pageLinkHTML,
 } from '../core/block-exporters.js';
 
@@ -172,6 +175,15 @@ export function registerBuiltins() {
       width: d.width || null, height: d.height || 480, viewerUrl: d.viewerUrl || '',
     }),
     toMarkdown: documentMarkdown, toHTML: documentHTML,
+  });
+  registerBlock({
+    type: 'platform-content', label: 'Platform Content', icon: '🧩', group: null,
+    component: PlatformBlock,
+    create: (d = {}) => ({
+      heading: d.heading || '', query: d.query || '', ids: d.ids || [], source: d.source || '',
+      refresh: clampRefresh(d.refresh), width: d.width || null, height: d.height || 260, html: d.html || '',
+    }),
+    toMarkdown: platformMarkdown, toHTML: platformHTML,
   });
 
   // Table + TOC

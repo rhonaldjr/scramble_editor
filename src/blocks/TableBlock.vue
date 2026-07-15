@@ -1,7 +1,7 @@
 <template>
   <div class="sc-table-block" @focusin="onFocusIn" @focusout="onFocusOut">
     <!-- Floating toolbar (appears when the table is focused) -->
-    <div v-if="focused && !readonly" class="sc-tabletoolbar" @mousedown.prevent>
+    <div v-if="focused && !readonly" class="sc-tabletoolbar">
       <div class="sc-tt__group" role="group" aria-label="Table width">
         <button v-for="w in WIDTHS" :key="w.v" class="sc-tt__btn" :class="{ 'is-active': tableWidth === w.v }" :title="w.label" @click="setWidth(w.v)">{{ w.label }}</button>
       </div>
@@ -20,6 +20,10 @@
         <button class="sc-tt__btn sc-tt__icon" :disabled="!canMerge('right')" title="Merge right" @click="merge('right')">⇥</button>
         <button class="sc-tt__btn sc-tt__icon" :disabled="!canMerge('down')" title="Merge down" @click="merge('down')">⤓</button>
         <button class="sc-tt__btn sc-tt__icon" :disabled="!canSplit" title="Split cell" @click="split">⤲</button>
+      </div>
+      <div class="sc-tt__group sc-tt__fill" role="group" aria-label="Fill color">
+        <button v-for="s in FILL_SCOPES" :key="s.v" class="sc-tt__btn sc-tt__mini" :class="{ 'is-active': fillScope === s.v }" :disabled="!active" :title="`Fill the ${s.v}`" @click="fillScope = s.v">{{ s.label }}</button>
+        <GearColor :model-value="activeBg" @update:model-value="applyFill" />
       </div>
       <div class="sc-tt__group">
         <button class="sc-tt__btn sc-tt__icon sc-tt__danger" title="Delete table" @click="deleteTable">🗑</button>
@@ -61,16 +65,19 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useEditor } from '../composables/editor.js';
 import TableCell from './TableCell.vue';
+import GearColor from '../components/GearColor.vue';
 import * as table from '../core/table.js';
 
 const WIDTHS = [{ v: 'full', label: 'Full' }, { v: '75', label: '75%' }, { v: '50', label: '50%' }];
 const ALIGNS = [{ v: 'left', icon: '⇤' }, { v: 'center', icon: '↔' }, { v: 'right', icon: '⇥' }];
+const FILL_SCOPES = [{ v: 'cell', label: 'Cell' }, { v: 'row', label: 'Row' }, { v: 'col', label: 'Col' }];
 
 const props = defineProps({ block: { type: Object, required: true } });
 const ctx = useEditor();
 const readonly = computed(() => ctx.readonly.value);
 const active = ref(null); // { r, c } of the last-focused cell
 const focused = ref(false);
+const fillScope = ref('cell'); // 'cell' | 'row' | 'col'
 
 const rows = computed(() => props.block.data.rows);
 const colCount = computed(() => (rows.value[0] ? rows.value[0].length : 0));
@@ -139,6 +146,18 @@ const canSplit = computed(() => {
 });
 function merge(dir) { if (active.value && table.mergeCells(rows.value, active.value.r, active.value.c, dir)) changed(); }
 function split() { if (active.value && table.splitCell(rows.value, active.value.r, active.value.c)) changed(); }
+
+// --- fill (background color) of the active cell, its row, or its column ---
+const activeBg = computed(() => (activeCell.value && activeCell.value.bg) || '');
+function applyFill(color) {
+  if (!active.value) return;
+  const { r, c } = active.value;
+  const paint = (cell) => { if (cell) { if (color) cell.bg = color; else delete cell.bg; } };
+  if (fillScope.value === 'row') rows.value[r].forEach(paint);
+  else if (fillScope.value === 'col') rows.value.forEach((row) => paint(row[c]));
+  else paint(rows.value[r][c]);
+  changed();
+}
 
 // --- column resize (drag the boundary handles) ---
 function startColResize(i, e) {

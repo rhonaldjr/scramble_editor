@@ -301,7 +301,8 @@ Replace the `columns` layout block with a richer table.
 - [x] Column width resize: drag the boundary handles (control row) → `data.colWidths` (px); `<colgroup>` + `table-layout: fixed`; exported as a `<colgroup>`
 - [x] Merge / split cells: **Merge right**, **Merge down**, **Split** act on the focused cell; `mergeCells`/`splitCell`/`sanitizeSpans` keep the grid valid on all row/column edits
 - [x] ClickUp-style **floating toolbar** (appears when the table is focused): grouped, tokenized controls for table **width** (full / 75% / 50%), **alignment**, insert/delete row & column, merge/split, delete table; column-resize handles as a thin strip
-- [ ] Verify (browser): resize columns, merge a 2×2 region, split it, add/remove rows near a merge, set width + alignment, export HTML
+- [x] **Fill color** in the toolbar: a `GearColor` picker scoped to the selected **cell / row / column** (`cell.bg`); rendered inline + exported as a `style="background:…"`
+- [ ] Verify (browser): resize columns, merge a 2×2 region, split it, add/remove rows near a merge, set width + alignment, fill a row, export HTML
 
 <!-- Core: src/core/table.js (normalizeTable/cellSegments/emptyCell,
 sanitizeSpans, mergeCells, splitCell, add/deleteRow/Column). TableBlock.vue:
@@ -309,6 +310,27 @@ colgroup + resize handles + merge/split controls + active-cell tracking.
 TableCell.vue: object cells + colspan/rowspan. block-exporters tableHTML/Markdown
 updated. model.flattenColumns migration (was normalizeColumns). Columns.vue/
 Column.vue deleted. -->
+
+
+## Phase V21 — Platform Content Block (host-configured live content)
+
+A content block that consumes a **host-configured** API (endpoint + optional
+auth), queries it, and renders returned HTML inside the block. The component
+stays backend-agnostic — the host wires the network via adapters + a `platform`
+prop; the endpoint/auth are pre-configured when integrating the component.
+
+- [x] `platform-content` block: renders resolved HTML (sandboxed iframe) with an optional heading; alignment (`props.align`) + resizable width/height
+- [x] Host interface: `platform` prop `{ sources: [{ id, name }] }` (+ `ctx.platform`) and adapters `platformSearch(query, { source, blockId }) → results[]` and `platformResolve({ query, ids, source, blockId }) → { html } | html`; the endpoint + auth live in the host's adapter implementation (configured at integration time)
+- [x] Refresh rate: **none** (on page load) or an interval clamped to **5s min / 1h max** (`core/platform.js`: `REFRESH_OPTIONS`, `clampRefresh`); auto-refreshes without spamming `@change`
+- [x] ⚙ gear: standard options (heading, alignment, width) + refresh + source picker + a **search bar** — searching calls `platformSearch`; results can be **selected individually** (`data.ids`) or the search text **set as the block query** (`data.query`)
+- [x] Events `platform-configured` / `platform-loaded`; graceful empty state when unconfigured; exporter emits the last resolved HTML
+- [x] Example app: configure a mock source (endpoint + auth), implement `platformSearch`/`platformResolve`, add a starter block; update the README tutorial
+- [ ] Verify (browser): configure, search + select, set a query, change refresh rate, resize/align, export
+
+<!-- Core: src/core/platform.js (REFRESH_OPTIONS, clampRefresh — pure, Vitest).
+Block: PlatformBlock.vue + `platform-content` registry entry + block-exporters
+platform*. ScrambleEditor: `platform` prop + ctx.platform + platform-loaded/
+configured events. Example: platform sources + adapters + starter block. -->
 
 
 ## Manual Test Checklist (after each phase, on Node 18+)

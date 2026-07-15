@@ -49,6 +49,7 @@ listen to typed events, and wire your **own backend** through adapter functions.
   - [11. History / version restore](#11-history--version-restore)
   - [12. Live collaboration (presence + sync)](#12-live-collaboration-presence--sync)
   - [13. Presentations & block backgrounds](#13-presentations--block-backgrounds)
+  - [14. Platform Content (host-configured live content)](#14-platform-content-host-configured-live-content)
 - [Building extensions (custom blocks)](#building-extensions-custom-blocks)
   - [Anatomy of a block](#anatomy-of-a-block)
   - [A block that renders dynamic data](#a-block-that-renders-dynamic-data)
@@ -88,8 +89,9 @@ listen to typed events, and wire your **own backend** through adapter functions.
   file; type is auto-detected and previewed inline (native PDF, or a
   host-resolved viewer / client-rendered HTML), resizable.
 - Table with a **floating toolbar** (on focus): table width (full / 75% / 50%),
-  alignment, add/remove rows & columns, **drag-resize column widths**, and
-  **merge / split cells** — plus an auto Table of Contents.
+  alignment, add/remove rows & columns, **drag-resize column widths**,
+  **merge / split cells**, and a **fill-color** picker (cell / row / column) —
+  plus an auto Table of Contents.
 
 **Structure & layout**
 
@@ -224,7 +226,8 @@ A block **type** is a Vue component **plus** a registry entry (`create`,
 > **document**, table (resizable columns + merge/split cells), table-of-contents, page-link, **slide** /
 > **slides (presentation)**, **button** (hyperlink or host-handled action, with
 > configurable colors/style), **accordion** (a group of collapsible items — add
-> more with "+ Add accordion item") — plus your own via
+> more with "+ Add accordion item"), **platform content** (host-configured live
+> content from your API) — plus your own via
 > [`registerBlock`](#building-extensions-custom-blocks).
 >
 > Blocks can be **aligned** left / center / right (block handle menu, or the ⚙
@@ -258,6 +261,7 @@ authoring block data and exporters.
 | `width` | String\|Number | `'normal'` \| `'full'` \| `'75%'` \| `'50%'` (aliases `'three-quarter'`, `'half'`) \| a number (px) \| any CSS length. Reactive. |
 | `fonts` | Array | Custom fonts `[{ id, label, family, url? }]`. Entries with `url` inject a `<link>`; picked from the page-style (**Aa**) menu. |
 | `tokens` | Object | Host UI-theme overrides for the editor **chrome** (buttons, toolbars, menus, gear, present controls) — e.g. `{ accent: '#e0218a', 'bar-bg': '#2a0a24', radius: '10px' }`. Highest precedence (above built-in light/dark). |
+| `platform` | Object | Config for the **Platform Content** block — `{ sources: [{ id, name }] }`. Endpoint + auth live in your `platformSearch`/`platformResolve` adapter implementations. |
 
 A `#footer` slot receives `{ words, chars }` for a word-count footer.
 
@@ -271,9 +275,9 @@ Every mutation emits a typed event **and** a catch-all `@event` with
 `block-duplicated`, `block-collapsed`, `block-link-copied`, `style-changed`,
 `slash-opened`, `slash-selected`, `shortcut-applied`, `media-uploaded`,
 `media-resized`, `media-configured`, `document-added`, `document-configured`,
-`content-loaded`, `button-clicked`, `selection-blocks`, `page-link-open`,
-`cursor-changed`, `comment-added`, `comment-resolved`, `mention-inserted`,
-`fullscreen-changed`.
+`content-loaded`, `button-clicked`, `platform-configured`, `platform-loaded`,
+`selection-blocks`, `page-link-open`, `cursor-changed`, `comment-added`,
+`comment-resolved`, `mention-inserted`, `fullscreen-changed`.
 
 ```vue
 <ScrambleEditor
@@ -310,6 +314,8 @@ The component never calls a server; it calls the adapters you pass:
 | `fetchEmbedMeta` | `(url) => { title, image, … }` | Bookmark previews. |
 | `resolveDocumentUrl` | `({ url, type, name, blockId, file }) => url \| { url } \| { html }` | How the Document block previews a file (see [scenario 7](#7-documents-pdf--word--excel--powerpoint--odf)). |
 | `listDocuments` | `() => [{ id, title }]` | The page-link picker. |
+| `platformSearch` | `(query, { source, blockId }) => [{ id, title }]` | Search results for the Platform Content block's gear. |
+| `platformResolve` | `({ query, ids, source, blockId }) => { html } \| html` | Rendered HTML for a Platform Content block (see [scenario 14](#14-platform-content-host-configured-live-content)). |
 
 ---
 
@@ -655,6 +661,52 @@ ctx.setBackground(blockId, { color: '', image: '' });     // clear
 Backgrounds live on `block.props` (`backgroundColor` / `backgroundImage`), so
 they're plain data — they persist and export (slides become `<section>`s with
 inline backgrounds; Markdown separates slides with `---`).
+
+### 14. Platform Content (host-configured live content)
+
+The **Platform Content** block (`/platform`) turns a document into a live surface
+onto your own API: the host **pre-configures an endpoint (+ optional auth)** at
+integration time, and the block queries it and renders the returned **HTML**
+inside a sandboxed frame. The component never calls a server itself — you own the
+network through two adapters (so auth, base URLs, and query shapes stay yours):
+
+```vue
+<script setup>
+const platform = {
+  // Sources are shown in the block's ⚙ Source picker; endpoint + auth are yours.
+  sources: [{ id: 'catalog', name: 'Catalog', endpoint: 'https://api.example.com/catalog', auth: { token } }],
+};
+
+const adapters = {
+  // Gear search bar → your API search
+  platformSearch: async (query, { source }) => {
+    const res = await fetch(`${endpointFor(source)}/search?q=${encodeURIComponent(query)}`, { headers: authFor(source) });
+    return (await res.json()).items;              // [{ id, title }]
+  },
+  // Resolve the block's current config into HTML (your API renders it)
+  platformResolve: async ({ query, ids, source }) => {
+    const res = await fetch(`${endpointFor(source)}/render`, {
+      method: 'POST', headers: authFor(source), body: JSON.stringify({ query, ids }),
+    });
+    return { html: await res.text() };            // { html } (or a raw HTML string)
+  },
+};
+</script>
+
+<template>
+  <ScrambleEditor v-model="doc" :platform="platform" :adapters="adapters" @platform-loaded="onLoad" />
+</template>
+```
+
+In the editor, the block's **⚙ gear** offers standard options (heading, alignment,
+width) plus a **Source** picker, a **Refresh rate** (*On page load*, or an interval
+between **5 seconds** and **1 hour**), and a **search bar**. Searching calls
+`platformSearch`; you can either **select results individually** (`data.ids`) or
+**set the search text as the block's query** (`data.query`) for a live view. The
+block then resolves through `platformResolve` and re-renders on the chosen cadence.
+It emits `platform-configured` (settings changed) and `platform-loaded` (content
+resolved); the last resolved HTML is cached and exported. A full working mock
+lives in [`examples/HostApp.vue`](examples/HostApp.vue).
 
 ---
 

@@ -439,6 +439,30 @@ test('table: floating toolbar on focus — merge cells + set width', async () =>
   expect(wrapper.vm.getDocument().blocks[0].data.width).toBe('50');
 });
 
+test('table toolbar: fill a whole row with a background color', async () => {
+  const cell = (t) => [{ text: t, marks: [] }];
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{ id: 'tbl', type: 'table', data: { rows: [[cell('A'), cell('B')], [cell('1'), cell('2')]] }, props: {}, children: [] }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
+  await flushPromises();
+  const cell0 = wrapper.findAll('.sc-table__cell')[0];
+  await cell0.trigger('focus');
+  await cell0.trigger('focusin');
+  await nextTick();
+  // scope = Row, then pick a color from the fill picker
+  await wrapper.findAll('.sc-tt__btn').find((b) => b.text() === 'Row').trigger('click');
+  const picker = wrapper.find('.sc-tt__fill input[type="color"]');
+  picker.element.value = '#ffe2c2';
+  await picker.trigger('input');
+  await nextTick();
+  const rows = wrapper.vm.getDocument().blocks[0].data.rows;
+  expect(rows[0].every((c) => c.bg === '#ffe2c2')).toBe(true);
+  expect(rows[1].every((c) => !c.bg)).toBe(true); // other rows untouched
+  expect(wrapper.vm.getHTML()).toContain('style="background:#ffe2c2"');
+});
+
 test('block alignment (props.align) applies a content-aware class', async () => {
   const doc = {
     id: 'd', title: 't', style: {},
@@ -447,6 +471,29 @@ test('block alignment (props.align) applies a content-aware class', async () => 
   const wrapper = mount(ScrambleEditor, { props: { modelValue: doc } });
   await flushPromises();
   expect(wrapper.find('.sc-block').classes()).toContain('sc-align-center');
+});
+
+test('platform-content resolves via the adapter and renders + exports the HTML', async () => {
+  const platformResolve = async ({ ids }) => ({ html: `<p>items:${(ids || []).join(',')}</p>` });
+  const doc = {
+    id: 'd', title: 't', style: {},
+    blocks: [{ id: 'pc', type: 'platform-content', data: { heading: 'Feed', ids: ['a', 'b'], refresh: 'none', height: 200 }, props: {}, children: [] }],
+  };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc, adapters: { platformResolve } } });
+  await flushPromises();
+  await nextTick();
+  const frame = wrapper.find('.sc-platform__frame');
+  expect(frame.exists()).toBe(true);
+  expect(frame.attributes('srcdoc')).toContain('items:a,b');
+  expect(wrapper.text()).toContain('Feed'); // heading
+  expect(wrapper.vm.getHTML()).toContain('items:a,b'); // exported
+});
+
+test('platform-content shows a config prompt when unconfigured', async () => {
+  const doc = { id: 'd', title: 't', style: {}, blocks: [{ id: 'pc', type: 'platform-content', data: { refresh: 'none' }, props: {}, children: [] }] };
+  const wrapper = mount(ScrambleEditor, { props: { modelValue: doc, adapters: { platformResolve: async () => ({ html: '' }) } } });
+  await flushPromises();
+  expect(wrapper.find('.sc-platform__placeholder').text()).toContain('search and pick');
 });
 
 test('readonly renders without contenteditable', async () => {

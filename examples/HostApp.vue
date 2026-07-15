@@ -13,6 +13,9 @@
     • Documents    — a `resolveDocumentUrl` adapter resolves how the Document
                      block previews pdf/docx/pptx/xlsx/odt (here: Google viewer
                      for public files; default is native PDF + Office viewer).
+    • Platform     — a `platform` prop (endpoint + auth config) + `platformSearch`
+                     / `platformResolve` adapters feed the Platform Content block
+                     (here: a mock catalog; use your real API in an app).
     • Contacts     — a `fetchContacts` adapter (here: a static list).
     • Events       — an audit log built from the catch-all @event.
     • Control      — enable/disable features, readonly, imperative get/set/export.
@@ -55,6 +58,7 @@
           :width="editorWidth"
           :fonts="fonts"
           :tokens="brand"
+          :platform="platform"
           @comment-added="onCommentAdded"
           @comment-resolved="onCommentResolved"
           @button-clicked="onButtonClicked"
@@ -216,6 +220,7 @@ function defaultDoc() {
           { id: 'acc-b2', type: 'paragraph', data: { segments: [{ text: 'Yes — use “+ Add accordion item” at the bottom of the accordion.', marks: [] }] }, props: {}, children: [] },
         ] },
       ] },
+      { id: 'plat', type: 'platform-content', data: { heading: 'Live from the platform', source: 'catalog', ids: ['p2'], refresh: 'none', height: 200 }, props: {}, children: [] },
       { id: 'ct', type: 'contact', data: { contact: null }, props: {}, children: [] },
       { id: 'w', type: 'webpage', data: { url: 'https://example.com', width: null, height: 360 }, props: {}, children: [] },
       { id: 'deck', type: 'slides', data: {}, props: {}, children: [
@@ -385,6 +390,40 @@ const adapters = {
     { id: 'doc-getting-started', title: 'Getting started' },
     { id: 'doc-roadmap', title: 'Roadmap' },
   ],
+
+  // --- Platform Content: the host owns the endpoint + auth and the fetching ---
+  // In a real app these call your configured API (see `platform.sources`) with
+  // its auth. Here we mock a tiny "product catalog" so the demo is self-contained.
+  platformSearch: async (query, { source } = {}) => {
+    // await fetch(sourceEndpoint(source) + '/search?q=' + query, { headers: authHeaders(source) })
+    const q = query.toLowerCase();
+    return PLATFORM_ITEMS.filter((it) => it.title.toLowerCase().includes(q)).map((it) => ({ id: it.id, title: it.title }));
+  },
+  platformResolve: async ({ query, ids, source } = {}) => {
+    // await fetch(sourceEndpoint(source) + '/render', { method:'POST', headers: authHeaders(source), body: ... })
+    let items = PLATFORM_ITEMS;
+    if (ids && ids.length) items = PLATFORM_ITEMS.filter((it) => ids.includes(it.id));
+    else if (query) { const q = query.toLowerCase(); items = PLATFORM_ITEMS.filter((it) => it.title.toLowerCase().includes(q)); }
+    if (!items.length) return { html: '<p>No matching content.</p>' };
+    const cards = items.map((it) =>
+      `<article style="border:1px solid #e2e2e2;border-radius:8px;padding:10px 12px;margin:0 0 8px">
+         <div style="font-weight:600">${it.title}</div>
+         <div style="color:#666;font-size:13px">${it.price} · updated ${new Date().toLocaleTimeString()}</div>
+       </article>`).join('');
+    return { html: cards };
+  },
+};
+
+// The endpoints the host configures at integration time (endpoint + optional
+// auth). Passed to the component via :platform; the adapters above use them.
+const PLATFORM_ITEMS = [
+  { id: 'p1', title: 'Onboarding Guide', price: 'Free' },
+  { id: 'p2', title: 'Pro Plan', price: '$29/mo' },
+  { id: 'p3', title: 'Team Workspace', price: '$99/mo' },
+  { id: 'p4', title: 'API Access Add-on', price: '$15/mo' },
+];
+const platform = {
+  sources: [{ id: 'catalog', name: 'Demo Catalog', endpoint: 'https://api.example.com/catalog', auth: { token: 'demo-token' } }],
 };
 
 // --- collaboration (host-owned transport) ---

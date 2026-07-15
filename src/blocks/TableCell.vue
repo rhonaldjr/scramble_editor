@@ -3,6 +3,7 @@
     :is="header ? 'th' : 'td'"
     ref="el"
     class="sc-table__cell"
+    :style="cellStyle"
     :colspan="colSpan > 1 ? colSpan : null"
     :rowspan="rowSpan > 1 ? rowSpan : null"
     :contenteditable="!readonly"
@@ -27,6 +28,7 @@ const emit = defineEmits(['update', 'focus']);
 const el = ref(null);
 const colSpan = computed(() => (props.cell && props.cell.colSpan) || 1);
 const rowSpan = computed(() => (props.cell && props.cell.rowSpan) || 1);
+const cellStyle = computed(() => (props.cell && props.cell.bg ? { background: props.cell.bg } : {}));
 let internal = false;
 
 function paint() { if (el.value) el.value.innerHTML = segmentsToHTML(cellSegments(props.cell)); }

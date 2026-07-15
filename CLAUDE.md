@@ -103,11 +103,15 @@ examples/                   # host apps consuming the component (Gallery + Minim
 Special blocks: `slides` (a deck whose
 children are `slide` container blocks — background via `props.backgroundColor` /
 `props.backgroundImage`, Present mode overlay), `table`
-(`data.rows` = 2D grid of cell objects `{ segments, colSpan?, rowSpan?, covered? }`
-via `core/table.js`; `data.colWidths` = per-column px; resize + merge/split;
-legacy segment-array cells auto-upgrade), `toc` (renders from headings),
+(`data.rows` = 2D grid of cell objects `{ segments, colSpan?, rowSpan?, covered?, bg? }`
+via `core/table.js`; `data.colWidths` = per-column px; `data.width` = full/75/50;
+resize + merge/split + fill color (cell/row/col); legacy segment-array cells
+auto-upgrade), `toc` (renders from headings),
 `page-link` (`data.docId`), media/embed (`data.url` + host-provided metadata),
-`webpage` (`data.url` + `width`/`height` — live iframe preview), `document`
+`webpage` (`data.url` + `width`/`height` — live iframe preview), `platform-content`
+(host-configured live content: `data.query`/`ids`/`source`/`refresh`/`html`
+resolved via `adapters.platformSearch` + `platformResolve` + the `platform` prop;
+`core/platform.js` clamps the refresh 5s–1h), `document`
 (`data.url`/`name`/`docType`/`width`/`height` — pdf/office/odf viewer resolved
 via `adapters.resolveDocumentUrl` or a built-in default; see `core/documents.js`).
 Rich-HTML paste is imported to structured blocks via `core/html-import.js`.
@@ -150,6 +154,7 @@ internals.
 - **`adapters.fetchContacts(query) => contact[]`** — mentions / contact block.
 - **`adapters.fetchEmbedMeta(url) => meta`** — bookmark previews.
 - **`adapters.resolveDocumentUrl({url,type,name,blockId,file}) => url | {url} | {html}`** — resolve the Document block's preview: a viewer URL, or client-side-rendered `{html}` (shown in a sandboxed iframe). Optional; falls back to native PDF + Office Online viewer.
+- **`adapters.platformSearch(query,{source,blockId}) => [{id,title}]`** + **`adapters.platformResolve({query,ids,source,blockId}) => {html}|html`** — the Platform Content block's search + content fetch (endpoint/auth live in the host adapter; `platform` prop lists sources). The component never calls the API itself.
 - **Collaboration / comments / history**: consumed via events + adapters; the
   component provides hooks, the host provides transport/storage.
 
@@ -160,7 +165,7 @@ Typed events (also surfaced via a catch-all `@event` `{ type, detail }`):
 `block-deleted`, `block-moved`, `block-converted`, `block-duplicated`,
 `block-collapsed`, `selection-blocks`, `slash-opened`, `slash-selected`,
 `shortcut-applied`, `media-uploaded`, `media-resized`, `media-configured`,
-`document-added`, `document-configured`, `content-loaded`, `button-clicked`, `page-link-open`, `block-custom`. Add
+`document-added`, `document-configured`, `content-loaded`, `button-clicked`, `platform-configured`, `platform-loaded`, `page-link-open`, `block-custom`. Add
 new events here and document the payload where emitted.
 
 ## Testing Expectations

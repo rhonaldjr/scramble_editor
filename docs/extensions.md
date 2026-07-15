@@ -81,6 +81,8 @@ The component never calls a server. It calls adapters you pass:
 - `adapters.upload(file) => { url } | url` — store media.
 - `adapters.fetchContacts(query) => contact[]` — mentions / contact block.
 - `adapters.fetchEmbedMeta(url) => { title, image, … }` — bookmark previews.
+- `adapters.resolveDocumentUrl({url,type,name,blockId,file}) => url | {url} | {html}` — Document block preview.
+- `adapters.platformSearch(query,{source,blockId}) => [{id,title}]` + `adapters.platformResolve({query,ids,source,blockId}) => {html}|html` — Platform Content block (with the `platform` prop for source metadata; endpoint/auth are yours).
 
 Persistence is `v-model` + `@change`.
 
